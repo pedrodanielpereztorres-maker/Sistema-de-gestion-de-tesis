@@ -17,3 +17,7 @@ dist/
 .DS_Store
 # Assets
 assets/
+# Local env
+.env
+# Build artifacts/Web
+.web/
