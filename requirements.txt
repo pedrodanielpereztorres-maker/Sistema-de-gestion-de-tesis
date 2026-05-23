@@ -1,0 +1,7 @@
+psycopg2-binary
+sqlalchemy
+pydantic
+bcrypt
+python-dotenv
+reflex==0.9.1
+fpdf2
