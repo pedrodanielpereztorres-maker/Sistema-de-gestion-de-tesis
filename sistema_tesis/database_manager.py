@@ -160,7 +160,6 @@ def inicializar_infraestructura() -> None:
     """Crea la estructura de la base de datos si no existe."""
     conexion = obtener_conexion()
     if conexion is None:
-        logger = logging.getLogger(__name__)
         logger.critical("No se pudo establecer la conexión para crear las tablas.")
         return
     try:

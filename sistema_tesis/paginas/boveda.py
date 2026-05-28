@@ -15,6 +15,21 @@ COLOR_TEXTO_MUY_SUAVE = "#334155"
 COLOR_BORDE = "#E2E8F0"
 DEGRADADO_ICONO = "linear-gradient(135deg, #6366F1 0%, #7C3AED 100%)"
 
+# Helper: safely convert reactive or plain values to string for the UI
+def valor_a_string(v):
+    try:
+        if hasattr(v, "to"):
+            return v.to(str)
+    except Exception:
+        pass
+    try:
+        if v is None:
+            return "0"
+        return str(v)
+    except Exception:
+        return ""
+
+
 
 # ════════════════════════════════════════════════════════════
 #  COMPONENTE: TARJETA DE TESIS
@@ -793,11 +808,13 @@ def contenido_boveda() -> rx.Component:
                     width="28px", height="28px", border_radius="8px",
                     background="white", border=f"1px solid {COLOR_BORDE}",
                 ),
-                rx.text(
-                    EstadoBoveda.tesis_a_mostrar.length().to_string() +
-                    rx.cond(
-                        EstadoAutenticacion.rol_usuario == "administrador", " resultados", " disponibles"),
-                    font_size="15px", font_weight="700", color=COLOR_TEXTO_SUAVE,
+                rx.vstack(
+                    rx.heading(valor_a_string(EstadoBoveda.total_tesis_count), size="5", weight="bold", color=COLOR_TEXTO_SUAVE),
+                    rx.text(
+                        rx.cond(
+                            EstadoAutenticacion.rol_usuario == "administrador", " resultados", " disponibles"),
+                        font_size="13px", color=COLOR_TEXTO_SUAVE,
+                    ),
                 ),
                 spacing="2", align="center",
             ),
@@ -805,7 +822,7 @@ def contenido_boveda() -> rx.Component:
             direction={"initial": "column", "md": "row"},
         ),
         rx.cond(
-            EstadoBoveda.tesis_a_mostrar.length() == 0,
+            EstadoBoveda.total_tesis_count == 0,
             estado_vacio_boveda(),
             rx.grid(
                 rx.foreach(

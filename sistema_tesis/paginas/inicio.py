@@ -11,6 +11,20 @@ COLOR_FONDO_GLOBAL = "white"
 COLOR_TEXTO_BOLD = "#0F172A"
 COLOR_TEXTO_BODY = "#1E293B"
 
+# Helper: safely convert reactive or plain values to string for the UI
+def valor_a_string(v):
+    try:
+        # If v is a Reflex Var-like object with .to, prefer reactive conversion
+        if hasattr(v, "to"):
+            return v.to(str)
+    except Exception:
+        pass
+    try:
+        return str(v)
+    except Exception:
+        return ""
+
+
 
 def fila_estudiante_lista(estudiante: dict) -> rx.Component:
     return rx.hstack(
@@ -227,16 +241,16 @@ def panel_administrador() -> rx.Component:
     return rx.vstack(
         rx.grid(
             tarjeta_estadistica(
-                "Total Estudiantes", str(EstadoEstudiante.total_estudiantes), "users", "linear-gradient(135deg, #6366F1, #4338CA)"
+                "Total Estudiantes", valor_a_string(EstadoEstudiante.total_estudiantes), "users", "linear-gradient(135deg, #6366F1, #4338CA)"
             ),
             tarjeta_estadistica(
-                "En Pasantía", str(EstadoEstudiante.estudiantes_en_pasantia), "graduation-cap", "linear-gradient(135deg, #10B981, #059669)"
+                "En Pasantía", valor_a_string(EstadoEstudiante.estudiantes_en_pasantia), "graduation-cap", "linear-gradient(135deg, #10B981, #059669)"
             ),
             tarjeta_estadistica(
-                "Sin Pasantía", str(EstadoEstudiante.estudiantes_sin_pasantia), "user-minus", "linear-gradient(135deg, #F59E0B, #D97706)"
+                "Sin Pasantía", valor_a_string(EstadoEstudiante.estudiantes_sin_pasantia), "user-minus", "linear-gradient(135deg, #F59E0B, #D97706)"
             ),
             tarjeta_estadistica(
-                "Bóveda (Tesis)", str(EstadoBoveda.total_tesis), "library", "linear-gradient(135deg, #8B5CF6, #7C3AED)"
+                "Bóveda (Tesis)", valor_a_string(EstadoBoveda.total_tesis), "library", "linear-gradient(135deg, #8B5CF6, #7C3AED)"
             ),
             columns={"initial": "1", "sm": "2", "md": "4"},
             spacing="5",

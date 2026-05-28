@@ -101,7 +101,11 @@ class EstadoReportes(rx.State):
         except Exception as e:
             logger.exception("Error al cargar reportes: %s", e)
         finally:
-            conn.close()
+            if conn:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
 
     def exportar_empresas_excel(self):
         """Genera un reporte CSV de todas las empresas vinculadas."""

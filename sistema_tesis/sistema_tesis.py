@@ -31,12 +31,12 @@ app = rx.App(
 inicializar_infraestructura()
 
 # Registrar rutas con protección de sesión. /login permanece pública.
-app.add_page(pagina_inicio, route="/", on_load=EstadoAutenticacion.verificar_sesion_global)
+app.add_page(pagina_inicio, route="/", on_load=EstadoAutenticacion.verificar_sesion)
 app.add_page(pagina_login, route="/login")
-app.add_page(pagina_boveda, route="/boveda", on_load=EstadoAutenticacion.verificar_sesion_global)
-app.add_page(pagina_estudiantes, route="/estudiantes", on_load=EstadoAutenticacion.verificar_sesion_global)
-app.add_page(pagina_documentacion, route="/documentacion", on_load=EstadoAutenticacion.verificar_sesion_global)
+app.add_page(pagina_boveda, route="/boveda", on_load=EstadoAutenticacion.verificar_sesion)
+app.add_page(pagina_estudiantes, route="/estudiantes", on_load=EstadoAutenticacion.verificar_sesion_admin)
+app.add_page(pagina_documentacion, route="/documentacion", on_load=EstadoAutenticacion.verificar_sesion)
 # Páginas solo para administradores
-app.add_page(pagina_mantenimiento, route="/mantenimiento", on_load=EstadoAutenticacion.verificar_acceso_admin)
-app.add_page(pagina_perfil, route="/perfil", on_load=EstadoAutenticacion.verificar_sesion_global)
-app.add_page(pagina_reportes, route="/reportes", on_load=EstadoAutenticacion.verificar_acceso_admin)
+app.add_page(pagina_mantenimiento, route="/mantenimiento", on_load=EstadoAutenticacion.verificar_sesion_admin)
+app.add_page(pagina_perfil, route="/perfil", on_load=EstadoAutenticacion.verificar_sesion)
+app.add_page(pagina_reportes, route="/reportes", on_load=EstadoAutenticacion.verificar_sesion_admin)

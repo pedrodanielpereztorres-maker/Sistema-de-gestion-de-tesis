@@ -1,4 +1,5 @@
 import logging
+import re
 import reflex as rx
 from pydantic import BaseModel
 from ..database_manager import obtener_conexion
@@ -151,7 +152,11 @@ class EstadoMantenimiento(rx.State):
             logger.exception("Error crítico al cargar datos: %s", e)
             return rx.toast.error("Error al cargar datos.")
         finally:
-            conn.close()
+            if conn:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
 
     def probar_conexion(self):
         conn = obtener_conexion()
@@ -166,7 +171,11 @@ class EstadoMantenimiento(rx.State):
             logger.exception("Error en prueba de conexión: %s", e)
             return rx.toast.error(f"Error de conexión: {e}")
         finally:
-            conn.close()
+            if conn:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
 
     @rx.var
     def usuarios_filtrados(self) -> list[UsuarioSistema]:
@@ -201,6 +210,20 @@ class EstadoMantenimiento(rx.State):
     async def guardar_usuario(self):
         if not self.u_nombre or not self.u_correo or not self.u_cedula or not self.u_clave:
             return rx.toast.warning("Todos los campos son obligatorios.")
+
+        # Validar longitud mínima de contraseña
+        if len(self.u_clave) < 8:
+            return rx.toast.error("La contraseña debe tener al menos 8 caracteres.")
+
+        # Validar formato básico del correo
+        patron_correo = r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$'
+        if not re.match(patron_correo, self.u_correo.strip()):
+            return rx.toast.error("El correo no tiene un formato válido.")
+
+        # Validar cédula (solo números, longitud razonable)
+        if not self.u_cedula.strip().isdigit() or not (6 <= len(self.u_cedula.strip()) <= 10):
+            return rx.toast.error("La cédula debe tener entre 6 y 10 dígitos.")
+
         conn = obtener_conexion()
         if conn is None:
             return rx.toast.error("Sin conexión.")
@@ -239,7 +262,11 @@ class EstadoMantenimiento(rx.State):
             logger.exception("Error al guardar usuario: %s", e)
             return rx.toast.error(f"Error al registrar: {e}")
         finally:
-            conn.close()
+            if conn:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
 
     async def cargar_datos_usuario_tutor(self):
         if not self.t_cedula:
@@ -268,7 +295,11 @@ class EstadoMantenimiento(rx.State):
         except Exception as e:
             logger.exception("Error al buscar usuario tutor: %s", e)
         finally:
-            conn.close()
+            if conn:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
 
     def abrir_modal_tutor(self, editar: bool = False, tutor: TutorAcademico = None):
         self.t_en_edicion = editar
@@ -374,7 +405,11 @@ class EstadoMantenimiento(rx.State):
             logger.exception("Error al guardar tutor: %s", e)
             return rx.toast.error(f"Error al procesar tutor: {e}")
         finally:
-            conn.close()
+            if conn:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
 
     def alternar_estado_tutor(self, id_tutor: int):
         conn = obtener_conexion()
@@ -391,7 +426,11 @@ class EstadoMantenimiento(rx.State):
             logger.exception("Error al alternar estado de tutor: %s", e)
             return rx.toast.error(f"Error: {e}")
         finally:
-            conn.close()
+            if conn:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
 
     def eliminar_tutor(self, id_tutor: int):
         conn = obtener_conexion()
@@ -412,7 +451,11 @@ class EstadoMantenimiento(rx.State):
             logger.exception("Error al eliminar tutor: %s", e)
             return rx.toast.error(f"Error al eliminar: {e}")
         finally:
-            conn.close()
+            if conn:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
 
     def guardar_rol(self):
         conn = obtener_conexion()
@@ -430,7 +473,11 @@ class EstadoMantenimiento(rx.State):
             logger.exception("Error al guardar rol: %s", e)
             return rx.toast.error(f"Error al guardar rol: {e}")
         finally:
-            conn.close()
+            if conn:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
 
     def guardar_carrera(self):
         conn = obtener_conexion()
@@ -453,7 +500,11 @@ class EstadoMantenimiento(rx.State):
             logger.exception("Error al guardar carrera: %s", e)
             return rx.toast.error(f"Error al guardar carrera: {e}")
         finally:
-            conn.close()
+            if conn:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
 
     def eliminar_carrera(self, id_carrera: int):
         conn = obtener_conexion()
@@ -476,7 +527,11 @@ class EstadoMantenimiento(rx.State):
             logger.exception("Error al eliminar carrera: %s", e)
             return rx.toast.error(f"Error: {e}")
         finally:
-            conn.close()
+            if conn:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
 
     async def alternar_estado_usuario(self, id_usuario: int):
         from .estado_autenticacion import EstadoAutenticacion
@@ -501,7 +556,11 @@ class EstadoMantenimiento(rx.State):
         except Exception as e:
             logger.exception("Error al alternar estado de usuario: %s", e)
         finally:
-            conn.close()
+            if conn:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
 
     def alternar_estado_carrera(self, id_carrera: int):
         conn = obtener_conexion()
@@ -519,7 +578,11 @@ class EstadoMantenimiento(rx.State):
         except Exception as e:
             logger.exception("Error al alternar estado de carrera: %s", e)
         finally:
-            conn.close()
+            if conn:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
 
     @rx.var
     def nombres_roles(self) -> list[str]: return [r.nombre for r in self.roles]
@@ -553,7 +616,11 @@ class EstadoMantenimiento(rx.State):
             logger.exception("Error al eliminar rol: %s", e)
             return rx.toast.error(f"Error: {e}")
         finally:
-            conn.close()
+            if conn:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
 
     async def confirmar_eliminar_rol(self):
         """Verifica la contraseña del administrador contra el hash en BD y elimina el rol si coincide.
@@ -595,4 +662,8 @@ class EstadoMantenimiento(rx.State):
             logger.exception("Error al confirmar eliminación de rol: %s", e)
             return rx.toast.error("Error al verificar credenciales.")
         finally:
-            conn.close()
+            if conn:
+                try:
+                    conn.close()
+                except Exception:
+                    pass

@@ -11,6 +11,19 @@ COLOR_TEXTO_TITULO = "#0F172A"
 COLOR_TEXTO_CUERPO = "#334155"
 COLOR_PRIMARIO = "#6366F1"
 
+# Helper para convertir valores reactivos o estáticos a string segura
+def valor_a_string(v):
+    try:
+        if hasattr(v, "to"):
+            return v.to(str)
+    except Exception:
+        pass
+    try:
+        return str(v)
+    except Exception:
+        return ""
+
+
 def tarjeta_metrica(titulo: str, valor: str, descripcion: str, icono: str, color_scheme: str) -> rx.Component:
     return rx.card(
         rx.flex(
@@ -116,10 +129,10 @@ def contenido_reportes() -> rx.Component:
         ),
 
         rx.grid(
-            tarjeta_metrica("Estudiantes Totales", EstadoReportes.resumen_global["total_estudiantes"].to_string(), "Total registrados", "users", "indigo"),
-            tarjeta_metrica("En Pasantía", EstadoReportes.resumen_global["con_pasantia"].to_string(), "Con tutor asignado", "circle-check", "green"),
-            tarjeta_metrica("Pendientes", EstadoReportes.resumen_global["sin_pasantia"].to_string(), "Sin tutor asignado", "clock", "amber"),
-            tarjeta_metrica("Tesis Registradas", EstadoReportes.resumen_global["total_tesis"].to_string(), "En la bóveda", "book", "blue"),
+            tarjeta_metrica("Estudiantes Totales", valor_a_string(EstadoReportes.resumen_global.get("total_estudiantes")), "Total registrados", "users", "indigo"),
+            tarjeta_metrica("En Pasantía", valor_a_string(EstadoReportes.resumen_global.get("con_pasantia")), "Con tutor asignado", "circle-check", "green"),
+            tarjeta_metrica("Pendientes", valor_a_string(EstadoReportes.resumen_global.get("sin_pasantia")), "Sin tutor asignado", "clock", "amber"),
+            tarjeta_metrica("Tesis Registradas", valor_a_string(EstadoReportes.resumen_global.get("total_tesis")), "En la bóveda", "book", "blue"),
             columns={"initial": "1", "sm": "2", "md": "4"},
             spacing="4", width="100%", margin_bottom="6"
         ),
@@ -135,7 +148,7 @@ def contenido_reportes() -> rx.Component:
                         lambda item: rx.hstack(
                             rx.text(item["nombre"], size="2", flex="1", color=COLOR_TEXTO_CUERPO),
                             rx.progress(value=item["progreso"], color_scheme="indigo", width="50%"),
-                            rx.text(item["cantidad"].to_string(), weight="bold", size="2", width="30px", text_align="right"),
+                            rx.text(valor_a_string(item.get("cantidad")), weight="bold", size="2", width="30px", text_align="right"),
                             width="100%", align="center", padding_y="8px", border_bottom=f"1px solid {COLOR_BORDE}"
                         )
                     ),
@@ -152,7 +165,7 @@ def contenido_reportes() -> rx.Component:
                         lambda item: rx.hstack(
                             rx.center(rx.icon("user", size=14), width="24px", height="24px", bg="#F1F5F9", border_radius="full"),
                             rx.text(item["nombre"], size="2", flex="1", color=COLOR_TEXTO_CUERPO),
-                            rx.badge(item["cantidad"].to_string() + " alumnos", color_scheme="blue"),
+                            rx.badge(valor_a_string(item.get("cantidad")) + " alumnos", color_scheme="blue"),
                             width="100%", align="center", padding_y="10px", border_bottom=f"1px solid {COLOR_BORDE}"
                         )
                     ),
@@ -181,7 +194,8 @@ def contenido_reportes() -> rx.Component:
                                 align="start", spacing="1"
                             ),
                             rx.badge(
-                                rx.hstack(rx.icon("users", size=14), rx.text(item["cantidad"].to_string() + " pasantes")),
+                                rx.hstack(rx.icon("users", size=14), rx.text(valor_a_string(item.get("cantidad")) + " pasantes")),
+
                                 color_scheme="indigo", variant="surface", radius="full"
                             ),
                             spacing="3", align="start"

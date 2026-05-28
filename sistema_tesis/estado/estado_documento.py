@@ -36,35 +36,42 @@ class EstadoDocumento(rx.State):
 
     async def cargar_documentos(self):
         """Carga la lista de documentos desde la base de datos."""
-        conn = obtener_conexion()
-        if conn is None:
-            return
-
+        conn = None
         try:
-            with conn.cursor() as cursor:
-                cursor.execute("""
-                    SELECT id, titulo, descripcion, fecha_subida, tipo, tamano_kb, ruta_archivo 
-                    FROM documento 
-                    ORDER BY fecha_subida DESC;
-                """)
-                resultados = cursor.fetchall()
-                self.lista_documentos = [
-                    Documento(
-                        id=fila[0],
-                        titulo=fila[1],
-                        descripcion=fila[2],
-                        fecha_subida=fila[3].strftime(
-                            "%d/%m/%Y") if fila[3] else "",
-                        tipo=fila[4],
-                        tamano_kb=fila[5] or 0,
-                        tamano=f"{fila[5]} KB" if fila[5] is not None else "0 KB",
-                        url=f"/{fila[6].lstrip('/')}" if fila[6] else ""
-                    ) for fila in resultados
-                ]
+            conn = obtener_conexion()
+            if conn is None:
+                logger.error("Sin conexión para cargar documentos.")
+                return
+
+            with conn:
+                with conn.cursor() as cursor:
+                    cursor.execute("""
+                        SELECT id, titulo, descripcion, fecha_subida, tipo, tamano_kb, ruta_archivo 
+                        FROM documento 
+                        ORDER BY fecha_subida DESC;
+                    """)
+                    resultados = cursor.fetchall()
+                    self.lista_documentos = [
+                        Documento(
+                            id=fila[0],
+                            titulo=fila[1],
+                            descripcion=fila[2],
+                            fecha_subida=fila[3].strftime(
+                                "%d/%m/%Y") if fila[3] else "",
+                            tipo=fila[4],
+                            tamano_kb=fila[5] or 0,
+                            tamano=f"{fila[5]} KB" if fila[5] is not None else "0 KB",
+                            url=f"/{fila[6].lstrip('/')}" if fila[6] else ""
+                        ) for fila in resultados
+                    ]
         except Exception as e:
             logger.exception("Error al cargar documentos: %s", e)
         finally:
-            conn.close()
+            if conn:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
 
     def fijar_titulo_nuevo(self, val: str) -> None:
         self.titulo_nuevo = val
@@ -172,17 +179,19 @@ class EstadoDocumento(rx.State):
                     archivos_creados_bd_ids.append((nuevo_id, ruta_destino))
                 except Exception as e:
                     # Intentar borrar registro en BD
+                    logger.error("Error al escribir archivo en disco: %s", e)
+                    conn2 = obtener_conexion()
                     try:
-                        conn2 = obtener_conexion()
                         if conn2:
                             with conn2:
                                 with conn2.cursor() as c2:
                                     c2.execute("DELETE FROM documento WHERE id = %s", (nuevo_id,))
                                 conn2.commit()
-                            conn2.close()
-                    except Exception:
-                        pass
-                    logger.exception("Error al escribir archivo en disco: %s", e)
+                    except Exception as ex:
+                        logger.error("Fallo en limpieza de BD: %s", ex)
+                    finally:
+                        if conn2: conn2.close()
+                        
                     return rx.toast.error(f"Error al guardar el archivo {archivo.filename} en el servidor.")
 
             # Si llegamos aquí, todos los archivos se procesaron correctamente
@@ -201,11 +210,13 @@ class EstadoDocumento(rx.State):
                     # borrar registro BD
                     conn2 = obtener_conexion()
                     if conn2:
-                        with conn2:
-                            with conn2.cursor() as c2:
-                                c2.execute("DELETE FROM documento WHERE id = %s", (_id,))
-                            conn2.commit()
-                        conn2.close()
+                        try:
+                            with conn2:
+                                with conn2.cursor() as c2:
+                                    c2.execute("DELETE FROM documento WHERE id = %s", (_id,))
+                                conn2.commit()
+                        finally:
+                            conn2.close()
                 except Exception:
                     pass
             logger.exception("Error crítico al publicar documentos: %s", e)
@@ -252,7 +263,11 @@ class EstadoDocumento(rx.State):
             logger.error("Error al eliminar documento: %s", e, exc_info=True)
             return rx.toast.error("Error al eliminar el documento.")
         finally:
-            conn.close()
+            if conn:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
 
     def preparar_edicion(self, documento_instancia: Documento):
         self.id_edicion = documento_instancia.id
@@ -289,7 +304,11 @@ class EstadoDocumento(rx.State):
             logger.exception("Error al actualizar documento: %s", e)
             return rx.toast.error(f"Error al actualizar el documento: {e}")
         finally:
-            conn.close()
+            if conn:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
 
     def fijar_titulo_edicion(self, val: str) -> None: self.titulo_edicion = val
     def fijar_descripcion_edicion(self, val: str) -> None: self.descripcion_edicion = val

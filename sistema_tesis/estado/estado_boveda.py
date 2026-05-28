@@ -11,6 +11,19 @@ from ..database_manager import obtener_conexion
 from .estado_autenticacion import EstadoAutenticacion
 
 
+class CountProxy:
+    """Contenedor simple para exponer un método to_string() usado en la UI.
+
+    Definido a nivel de módulo para que las anotaciones de tipos sean evaluables
+    en tiempo de importación por reflex sin depender de referencias hacia la
+    propia clase EstadoBoveda.
+    """
+    def __init__(self, value: int):
+        self._value = value
+
+    def to_string(self) -> str:
+        return str(self._value)
+
 class EstadoBoveda(rx.State):
     lista_tesis: list[Dict[str, Any]] = []
     carreras_disponibles: list[str] = []
@@ -59,8 +72,9 @@ class EstadoBoveda(rx.State):
         """
         conn = obtener_conexion()
         if conn is None:
-            logger.error("Sin conexión para cargar tesis (obtener_conexion devolvió None).")
+            logger.error("Sin conexión para cargar tesis.")
             return rx.toast.error("Error de conexión al servidor.")
+
         try:
             with conn:
                 with conn.cursor() as cursor:
@@ -85,7 +99,11 @@ class EstadoBoveda(rx.State):
             logger.error("Error al cargar tesis: %s", e, exc_info=True)
             return rx.toast.error("Error al cargar tesis.")
         finally:
-            conn.close()
+            if conn:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
 
     @rx.var
     def lista_filtrada(self) -> list[Dict[str, Any]]:
@@ -138,6 +156,17 @@ class EstadoBoveda(rx.State):
             {"tipo": "Públicas", "color": "#10B981", "valor": publicas},
             {"tipo": "Privadas", "color": "#F59E0B", "valor": privadas},
         ]
+
+    @rx.var
+    def total_tesis_count(self) -> int:
+        """Cantidad de tesis que se mostrarán según filtros y permisos."""
+        # len() funciona sobre la lista devuelta por tesis_a_mostrar
+        return len(self.tesis_a_mostrar)
+
+    @rx.var
+    def total_tesis_display(self) -> CountProxy:
+        """Contenedor amigable para la UI si se necesita to_string()."""
+        return CountProxy(len(self.tesis_a_mostrar))
 
     @rx.var
     def detalles_estudiante_encontrado(self) -> Dict[str, str]:
@@ -253,6 +282,7 @@ class EstadoBoveda(rx.State):
         conn = obtener_conexion()
         if conn is None:
             return rx.toast.error("Error de conexión al servidor.")
+
         try:
             with conn:
                 with conn.cursor() as cursor:
@@ -269,10 +299,11 @@ class EstadoBoveda(rx.State):
             logger.exception("Error al eliminar tesis: %s", e)
             return rx.toast.error(f"Error al eliminar tesis: {e}")
         finally:
-            try:
-                conn.close()
-            except Exception:
-                pass
+            if conn:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
 
     async def abrir_modal_edicion(self, tesis_id: int) -> rx.Component:
         self.en_edicion = True
@@ -311,6 +342,7 @@ class EstadoBoveda(rx.State):
         if conn is None:
             logger.error("No se pudo establecer la conexión para buscar estudiante.")
             return rx.toast.error("Error de conexión al servidor.")
+
         try:
             with conn:
                 with conn.cursor() as cursor:
@@ -326,7 +358,11 @@ class EstadoBoveda(rx.State):
             logger.exception("Error en búsqueda de estudiante: %s", e)
             return rx.toast.error(f"Error en búsqueda: {e}")
         finally:
-            conn.close()
+            if conn:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
 
     async def registrar_tesis(self, archivos: list[rx.UploadFile]) -> rx.Component:
         estado_auth = await self.get_state(EstadoAutenticacion)
@@ -364,14 +400,15 @@ class EstadoBoveda(rx.State):
             return rx.toast.warning("Debe subir el archivo de la tesis.")
 
         self.procesando = True
-        conn = obtener_conexion()
-        if conn is None:
-            self.procesando = False
-            logger.error("No se pudo establecer la conexión para registrar tesis.")
-            return rx.toast.error("Error de conexión al servidor.")
-
+        conn = None
+        exito_db = False
         try:
-            # Normalizar campos
+            conn = obtener_conexion()
+            if conn is None:
+                self.procesando = False
+                logger.error("No se pudo establecer la conexión para registrar tesis.")
+                return rx.toast.error("Error de conexión al servidor.")
+
             self.titulo_tesis = self.titulo_tesis.strip()
             self.cedula_busqueda = self.cedula_busqueda.strip()
 
@@ -401,59 +438,43 @@ class EstadoBoveda(rx.State):
                         """, (self.titulo_tesis, self.hacer_publico, ruta_destino_final, id_estudiante))
 
                 conn.commit()
-
-            # A partir de aquí la transacción DB fue exitosa — ahora escribir el archivo en disco
-            if archivos and datos_subida is not None:
-                try:
-                    os.makedirs(os.path.dirname(ruta_destino), exist_ok=True)
-                    with open(ruta_destino, "wb") as f:
-                        f.write(datos_subida)
-                except Exception as e:
-                    # Si la escritura falla, revertir la ruta en la DB para evitar enlace roto
-                    conn2 = obtener_conexion()
-                    if conn2:
-                        try:
-                            with conn2:
-                                with conn2.cursor() as cursor2:
-                                    cursor2.execute("UPDATE tesis SET ruta_archivo = NULL WHERE estudiante_id = %s", (id_estudiante,))
-                                conn2.commit()
-                        except Exception:
-                            pass
-                        finally:
-                            conn2.close()
-                    raise
-
-            # Refrescar estado y UI
-            self.procesando = False
-            self.cerrar_modal()
-            await self.cargar_tesis()
-            return rx.toast.success("Tesis registrada exitosamente.")
+                exito_db = True
 
         except Exception as e:
-            self.procesando = False
             if conn:
                 try:
                     conn.rollback()
                 except Exception:
                     pass
-            # Limpieza: borrar archivo si quedó creado
-            if 'ruta_destino' in locals() and ruta_destino and os.path.exists(ruta_destino):
+            logger.exception("Error al registrar tesis en BD: %s", e)
+            self.procesando = False
+            return rx.toast.error(f"Error al registrar en base de datos: {e}")
+        finally:
+            if conn:
                 try:
-                    os.remove(ruta_destino)
+                    conn.close()
                 except Exception:
                     pass
-            logger.exception("Error al registrar tesis: %s", e)
-            return rx.toast.error(f"Error al registrar: {e}")
-        finally:
+
+        # 5. Solo si el commit fue exitoso, escribir el archivo en disco
+        if exito_db and archivos and datos_subida is not None:
             try:
-                conn.close()
-            except Exception:
-                pass
+                os.makedirs(os.path.dirname(ruta_destino), exist_ok=True)
+                with open(ruta_destino, "wb") as f:
+                    f.write(datos_subida)
+            except Exception as e:
+                logger.error("Error al escribir archivo de tesis tras commit: %s", e)
+                return rx.toast.warning("Tesis registrada en BD, pero hubo un error al guardar el archivo físico.")
+
+        # Refrescar estado y UI
+        self.procesando = False
+        self.cerrar_modal()
+        await self.cargar_tesis()
+        return rx.toast.success("Tesis procesada correctamente.")
 
     # El resto del archivo se mantiene igual (métodos de eliminación, reportes, etc.)
 
     @rx.var
-    def total_tesis(self) -> int:
+    def total_tesis(self) -> CountProxy:
         """Número total de tesis cargadas (activos)."""
-        return len(self.lista_tesis)
-
+        return CountProxy(len(self.lista_tesis))

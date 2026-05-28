@@ -16,8 +16,9 @@ dist/
 # OS
 .DS_Store
 # Assets
-assets/
+assets/documentos/doc_*
+assets/tesis/tesis_*
 # Local env
-.env
+*.env
 # Build artifacts/Web
 .web/

@@ -12,6 +12,20 @@ from .estado_boveda import EstadoBoveda
 import math
 
 
+class CountProxy:
+    """Contenedor simple para exponer to_string() usado por la UI.
+
+    Definido a nivel de módulo para evitar forward-references en las
+    anotaciones de tipos que Reflex requiere sean resolubles en import.
+    """
+    def __init__(self, value: int):
+        self._value = value
+
+    def to_string(self) -> str:
+        return str(self._value)
+
+
+
 class EstudianteResumen(BaseModel):
     cedula: str
     nombre: str
@@ -74,6 +88,8 @@ class EstadoEstudiante(rx.State):
     mostrar_modal_confirmacion: bool = False
     password_confirmacion: str = ""
     cedula_a_eliminar: str = ""
+    # Modal para mostrar ficha de empresa
+    empresa_modal_visible: bool = False
 
     async def cargar_estudiantes(self) -> None:
         auth_state = await self.get_state(EstadoAutenticacion)
@@ -83,7 +99,9 @@ class EstadoEstudiante(rx.State):
         # Contar total y paginar
         conn = obtener_conexion()
         if conn is None:
+            logger.error("No se pudo obtener conexión para cargar estudiantes.")
             return
+
         try:
             with conn:
                 with conn.cursor() as cursor:
@@ -135,15 +153,21 @@ class EstadoEstudiante(rx.State):
         except Exception as e:
             logger.error("Error al cargar estudiantes: %s", e, exc_info=True)
         finally:
-            conn.close()
+            if conn:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
 
     async def cargar_estadisticas_carrera(self) -> None:
         """Llena carreras_con_cantidad usando consultas SQL y los datos en memoria."""
-        conn = obtener_conexion()
-        if conn is None:
-            self.carreras_con_cantidad = []
-            return
+        conn = None
         try:
+            conn = obtener_conexion()
+            if conn is None:
+                self.carreras_con_cantidad = []
+                return
+
             with conn:
                 with conn.cursor() as cursor:
                     cursor.execute("SELECT nombre FROM carrera WHERE esta_activa = TRUE;")
@@ -161,7 +185,11 @@ class EstadoEstudiante(rx.State):
             logger.error("Error al cargar estadísticas de carrera: %s", e, exc_info=True)
             self.carreras_con_cantidad = []
         finally:
-            conn.close()
+            if conn:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
 
     @rx.var
     def estudiantes_filtrados(self) -> List[Dict[str, Any]]:
@@ -204,6 +232,24 @@ class EstadoEstudiante(rx.State):
         self.mostrar_modal = False
         self.en_edicion = False
         self.estudiante_seleccionado = {}
+
+    def fijar_busqueda_dinamica(self, val: str) -> None:
+        """Setter simple para la búsqueda dinámica en la UI. Recarga la lista de estudiantes."""
+        try:
+            self.busqueda_dinamica = val
+        except Exception:
+            # Fallback si recibe un objeto reactivo
+            self.busqueda_dinamica = str(val)
+        # Recargar resultado
+        rx.run_async(self.cargar_estudiantes())
+
+    def fijar_filtro_carrera(self, val: str) -> None:
+        """Setter para filtro de carrera. Recarga la lista de estudiantes."""
+        try:
+            self.filtro_carrera = val
+        except Exception:
+            self.filtro_carrera = str(val)
+        rx.run_async(self.cargar_estudiantes())
 
     async def cargar_datos_usuario(self) -> None:
         """Carga datos básicos de usuario/estudiante por cédula y los coloca en el estado.
@@ -311,6 +357,26 @@ class EstadoEstudiante(rx.State):
         self.mostrar_modal_confirmacion = False
         self.password_confirmacion = ""
         self.cedula_a_eliminar = ""
+
+    # Métodos para mostrar/ocultar la tarjeta flotante de la empresa
+    def abrir_modal_empresa(self, nombre_empresa: str, direccion: str, correo: str, telefono: str, tutor_empresa: str) -> None:
+        try:
+            self.nombre_empresa = nombre_empresa or ""
+            self.direccion_empresa = direccion or ""
+            self.correo_empresa = correo or ""
+            self.telefono_empresa = telefono or ""
+            self.tutor_empresa = tutor_empresa or ""
+        except Exception:
+            # Fallback cuando se reciben objetos reactivos
+            self.nombre_empresa = str(nombre_empresa)
+            self.direccion_empresa = str(direccion)
+            self.correo_empresa = str(correo)
+            self.telefono_empresa = str(telefono)
+            self.tutor_empresa = str(tutor_empresa)
+        self.empresa_modal_visible = True
+
+    def cerrar_modal_empresa(self) -> None:
+        self.empresa_modal_visible = False
 
     async def confirmar_eliminacion_estudiante(self) -> rx.Component:
         if not self.cedula_a_eliminar:
@@ -511,28 +577,20 @@ class EstadoEstudiante(rx.State):
 
 
     # --- Compatibilidad con vistas antiguas: contadores y listas esperadas por inicio.py ---
-    class _CountProxy:
-        def __init__(self, value: int):
-            self._value = value
-
-        def to_string(self) -> str:
-            return str(self._value)
-
     @rx.var
-    def total_estudiantes(self) -> int:
+    def total_estudiantes(self) -> CountProxy:
         """Número total de estudiantes activo."""
-        return int(self.total_registros)
+        return CountProxy(int(self.total_registros))
 
     @rx.var
-    def estudiantes_en_pasantia(self) -> int:
+    def estudiantes_en_pasantia(self) -> CountProxy:
         c = sum(1 for e in self.lista_estudiantes if e.get("nombre_tutor"))
-        return int(c)
+        return CountProxy(int(c))
 
     @rx.var
-    def estudiantes_sin_pasantia(self) -> int:
+    def estudiantes_sin_pasantia(self) -> CountProxy:
         c = sum(1 for e in self.lista_estudiantes if not e.get("nombre_tutor"))
-        return int(c)
-        return EstadoEstudiante._CountProxy(c)
+        return CountProxy(int(c))
 
     @rx.var
     def lista_con_pasantia(self) -> List[Dict[str, Any]]:
@@ -565,4 +623,3 @@ class EstadoEstudiante(rx.State):
         except Exception as e:
             logger.exception("Error al generar reporte de estudiantes: %s", e)
             return rx.toast.error(f"Error al generar reporte: {e}")
-
