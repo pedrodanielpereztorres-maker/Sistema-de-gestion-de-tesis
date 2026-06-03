@@ -209,24 +209,24 @@ class EstadoMantenimiento(rx.State):
 
     async def guardar_usuario(self):
         if not self.u_nombre or not self.u_correo or not self.u_cedula or not self.u_clave:
-            return rx.toast.warning("Todos los campos son obligatorios.")
+            return rx.toast.warning("⚠️ Campos Requeridos: Todos los campos del formulario son obligatorios. Por favor, asegúrese de ingresar cédula, nombre, apellido, correo y contraseña.")
 
         # Validar longitud mínima de contraseña
         if len(self.u_clave) < 8:
-            return rx.toast.error("La contraseña debe tener al menos 8 caracteres.")
+            return rx.toast.error("🔒 Seguridad de Contraseña: La clave ingresada debe tener un mínimo de 8 caracteres para cumplir con las políticas de seguridad.")
 
         # Validar formato básico del correo
         patron_correo = r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$'
         if not re.match(patron_correo, self.u_correo.strip()):
-            return rx.toast.error("El correo no tiene un formato válido.")
+            return rx.toast.error("✉️ Correo Inválido: La dirección de correo electrónico provista no posee un formato estructuralmente válido (ejemplo: usuario@dominio.com).")
 
         # Validar cédula (solo números, longitud razonable)
         if not self.u_cedula.strip().isdigit() or not (6 <= len(self.u_cedula.strip()) <= 10):
-            return rx.toast.error("La cédula debe tener entre 6 y 10 dígitos.")
+            return rx.toast.error("🪪 Cédula Incorrecta: El número de cédula de identidad debe contener únicamente caracteres numéricos y una longitud de entre 6 y 10 dígitos.")
 
         conn = obtener_conexion()
         if conn is None:
-            return rx.toast.error("Sin conexión.")
+            return rx.toast.error("🔌 Fallo de Conexión: No se pudo establecer comunicación con el servidor. Verifique la base de datos.")
         try:
             with conn:
                 with conn.cursor() as cursor:
@@ -234,7 +234,7 @@ class EstadoMantenimiento(rx.State):
                         "SELECT id FROM rol WHERE nombre = %s", (self.u_rol,))
                     res_rol = cursor.fetchone()
                     if not res_rol:
-                        return rx.toast.error("El rol seleccionado no es válido.")
+                        return rx.toast.error("❌ Rol Inválido: El rol seleccionado para el nuevo usuario no existe en la base de datos.")
                     from .estado_autenticacion import EncriptadorContrasena
                     hash_clave = EncriptadorContrasena.encriptar(self.u_clave)
                     cursor.execute("""
@@ -257,10 +257,10 @@ class EstadoMantenimiento(rx.State):
             boveda = await self.get_state(EstadoBoveda)
             await boveda.cargar_tesis()
 
-            return rx.toast.success("Usuario registrado correctamente.")
+            return rx.toast.success("🎉 Registro Exitoso: El nuevo usuario ha sido registrado y vinculado correctamente en el sistema.")
         except Exception as e:
             logger.exception("Error al guardar usuario: %s", e)
-            return rx.toast.error(f"Error al registrar: {e}")
+            return rx.toast.error(f"💥 Error al registrar: Ocurrió un error inesperado al almacenar el usuario: {e}")
         finally:
             if conn:
                 try:

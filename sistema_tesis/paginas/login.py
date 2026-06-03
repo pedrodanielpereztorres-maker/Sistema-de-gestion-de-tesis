@@ -1,39 +1,44 @@
 import reflex as rx
 from ..estado.estado_autenticacion import EstadoAutenticacion
 from ..componentes.toast_viewer import toast_viewer
-# Importar desde el componente base
 from ..componentes.campo_texto import COLOR_TEXTO_BOLD
 
 COLOR_FONDO_GLOBAL = "white"
 
 
 def pagina_login() -> rx.Component:
+    """Genera la vista de Login con un diseño extremadamente premium, moderno y pulido."""
     return rx.theme(
         rx.box(
             rx.center(
                 rx.card(
                     rx.vstack(
+                        # Ícono graduación en contenedor circular gradient brillante
                         rx.center(
-                            rx.icon("graduation-cap", size=48,
-                                    color=rx.color("indigo", 9)),
+                            rx.center(
+                                rx.icon("graduation-cap", size=32, color="white"),
+                                width="64px",
+                                height="64px",
+                                background="linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)",
+                                border_radius="20px",
+                                box_shadow="0 8px 24px rgba(99, 102, 241, 0.3)",
+                            ),
                             width="100%",
-                            margin_bottom="4",
+                            margin_bottom="2",
                         ),
-                        rx.center(
-                            rx.heading("Bienvenido", size="6",
-                                       align="center", weight="bold", color="#0F172A"),
-                            width="100%",
-                            margin_bottom="4",
-                        ),
-                        rx.center(
-                            rx.text("Sistema de Gestión de Tesis",
-                                    color="#1E293B", size="2", margin_bottom="4", font_weight="500"),
-                            width="100%",
-                            margin_bottom="4",
-                        ),
+                        # Cabecera / Títulos
                         rx.vstack(
-                            rx.text("Usuario", size="2",
-                                    weight="bold", color="#1E293B"),
+                            rx.heading("Acceso al Portal", size="7", align="center", weight="bold", color="#0F172A"),
+                            rx.text("Ingresa tus credenciales para acceder a la plataforma SGT",
+                                    color="#64748B", size="2", text_align="center", font_weight="500"),
+                            spacing="1",
+                            align="center",
+                            width="100%",
+                            margin_bottom="4",
+                        ),
+                        # Input: Usuario
+                        rx.vstack(
+                            rx.text("Correo Electrónico", size="2", weight="bold", color="#1E293B"),
                             rx.input(
                                 placeholder="ejemplo@correo.com",
                                 value=EstadoAutenticacion.entrada_usuario,
@@ -43,25 +48,28 @@ def pagina_login() -> rx.Component:
                                 size="3",
                                 style={
                                     "background": "white",
-                                    "border": "1.6px solid #94A3B8",
+                                    "border": "1.5px solid #CBD5E1",
                                     "color": "black",
-                                    "font_size": "15px",
-                                    "font_weight": "bold",
-                                    "box_shadow": "inset 0 1px 3px rgba(15,23,42,0.12)",
-                                    "&::placeholder": {"color": "#000000", "opacity": "1", "font_weight": "bold"},
+                                    "font_size": "14px",
+                                    "font_weight": "500",
+                                    "border_radius": "12px",
+                                    "box_shadow": "inset 0 1px 2px rgba(0, 0, 0, 0.02)",
+                                    "&::placeholder": {"color": "#94A3B8", "font_weight": "500"},
                                 },
                                 _focus={
-                                    "border_color": "#4338CA",
-                                    "box_shadow": "0 0 0 3px rgba(99,102,241,0.22)",
+                                    "border_color": "#6366F1",
+                                    "box_shadow": "0 0 0 3px rgba(99, 102, 241, 0.15)",
                                     "outline": "none",
                                 },
-                                _hover={"border_color": "#6366F1"}
+                                _hover={"border_color": "#94A3B8"}
                             ),
                             width="100%",
+                            align_items="start",
+                            spacing="1"
                         ),
+                        # Input: Contraseña
                         rx.vstack(
-                            rx.text("Contraseña", size="2",
-                                    weight="bold", color="#1E293B"),
+                            rx.text("Contraseña", size="2", weight="bold", color="#1E293B"),
                             rx.box(
                                 rx.input(
                                     placeholder="••••••••",
@@ -77,20 +85,21 @@ def pagina_login() -> rx.Component:
                                     size="3",
                                     style={
                                         "background": "white",
-                                        "border": "1.6px solid #94A3B8",
+                                        "border": "1.5px solid #CBD5E1",
                                         "color": "black",
-                                        "font_size": "15px",
-                                        "font_weight": "bold",
+                                        "font_size": "14px",
+                                        "font_weight": "500",
+                                        "border_radius": "12px",
                                         "padding_right": "45px",
-                                        "box_shadow": "inset 0 1px 3px rgba(15,23,42,0.12)",
-                                        "&::placeholder": {"color": "#000000", "opacity": "1", "font_weight": "bold"},
+                                        "box_shadow": "inset 0 1px 2px rgba(0, 0, 0, 0.02)",
+                                        "&::placeholder": {"color": "#94A3B8", "font_weight": "500"},
                                     },
                                     _focus={
-                                        "border_color": "#4338CA",
-                                        "box_shadow": "0 0 0 3px rgba(99,102,241,0.22)",
+                                        "border_color": "#6366F1",
+                                        "box_shadow": "0 0 0 3px rgba(99, 102, 241, 0.15)",
                                         "outline": "none",
                                     },
-                                    _hover={"border_color": "#6366F1"}
+                                    _hover={"border_color": "#94A3B8"}
                                 ),
                                 rx.icon_button(
                                     rx.icon(
@@ -118,13 +127,34 @@ def pagina_login() -> rx.Component:
                                 width="100%",
                             ),
                             width="100%",
+                            align_items="start",
+                            spacing="1"
                         ),
+                        # Botón Iniciar Sesión con gradiente y sombra
                         rx.button(
-                            "Iniciar Sesión",
+                            rx.hstack(
+                                rx.icon("log-in", size=18),
+                                rx.text("Iniciar Sesión", weight="bold"),
+                                spacing="2",
+                                align="center"
+                            ),
                             on_click=EstadoAutenticacion.iniciar_sesion,
                             width="100%",
                             size="3",
-                            margin_top="2",
+                            style={
+                                "background": "linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)",
+                                "color": "white",
+                                "border_radius": "12px",
+                                "box_shadow": "0 8px 20px rgba(99, 102, 241, 0.22)",
+                                "cursor": "pointer",
+                                "transition": "all 0.2s ease",
+                                "margin_top": "12px",
+                            },
+                            _hover={
+                                "box_shadow": "0 12px 28px rgba(99, 102, 241, 0.3)",
+                                "transform": "translateY(-1px)"
+                            },
+                            _active={"transform": "translateY(0)"}
                         ),
                         toast_viewer(),
                         spacing="4",
@@ -132,12 +162,18 @@ def pagina_login() -> rx.Component:
                     ),
                     size="4",
                     width="100%",
-                    max_width="400px",
-                    style={"background": "#FFFFFF", "opacity": "1"},
-                    box_shadow="lg",
+                    max_width="420px",
+                    style={
+                        "background": "#FFFFFF",
+                        "border-radius": "24px",
+                        "box_shadow": "0 20px 40px -15px rgba(99, 102, 241, 0.12), 0 0 0 1px rgba(99, 102, 241, 0.04)",
+                        "border": "1px solid #E2E8F0",
+                        "padding": "36px",
+                    },
                 ),
                 height="100vh",
             ),
+            # Logo flotante en esquina
             rx.image(
                 src="/logo.png",
                 width=["100px", "130px", "160px"],
@@ -145,13 +181,13 @@ def pagina_login() -> rx.Component:
                 position="fixed",
                 bottom="0px",
                 right="0px",
-                opacity=["0.6", "0.4", "0.3"],  # Más visible en móvil
+                opacity=["0.6", "0.4", "0.3"],
                 filter="drop-shadow(0 2px 4px rgba(0,0,0,0.05))",
                 transition="all 0.4s ease-in-out",
                 _hover={"opacity": "0.9", "transform": "scale(1.05)"},
                 z_index="10",
             ),
-            background=COLOR_FONDO_GLOBAL,
+            background="radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.05) 0%, rgba(255, 255, 255, 1) 90%)",
             width="100%",
             height="100vh",
             position="relative",

@@ -92,10 +92,11 @@ def _generar_contenido_enlace(
         background=rx.cond(esta_activo, COLOR_ACTIVO_FONDO, "transparent"),
         border_left=rx.cond(
             esta_activo, f"3px solid {COLOR_PRIMARIO}", "3px solid transparent"),
-        transition="all 0.16s cubic-bezier(.4,0,.2,1)",
+        transition="all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
         _hover={
             "background": COLOR_HOVER_FONDO,
             "border_left": f"3px solid {COLOR_PRIMARIO}",
+            "transform": "translateX(4px)",
         },
         cursor="pointer",
     )

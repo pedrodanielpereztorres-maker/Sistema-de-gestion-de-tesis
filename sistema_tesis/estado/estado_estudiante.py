@@ -205,21 +205,20 @@ class EstadoEstudiante(rx.State):
             lista = [e for e in lista if e["nombre_tutor"] == ""]
         return lista
 
-    def pagina_siguiente(self) -> None:
+    async def pagina_siguiente(self) -> None:
         if self.pagina_actual < self.total_paginas:
             self.pagina_actual += 1
-            # recargar página
-            rx.run_async(self.cargar_estudiantes())
+            await self.cargar_estudiantes()
 
-    def pagina_anterior(self) -> None:
+    async def pagina_anterior(self) -> None:
         if self.pagina_actual > 1:
             self.pagina_actual -= 1
-            rx.run_async(self.cargar_estudiantes())
+            await self.cargar_estudiantes()
 
-    def ir_a_pagina(self, n: int) -> None:
+    async def ir_a_pagina(self, n: int) -> None:
         if 1 <= n <= self.total_paginas:
             self.pagina_actual = n
-            rx.run_async(self.cargar_estudiantes())
+            await self.cargar_estudiantes()
 
     # El resto del archivo (abrir_modal, guardar_estudiante, eliminar, reportes) se mantiene igual.
 
@@ -228,28 +227,53 @@ class EstadoEstudiante(rx.State):
         self.en_edicion = False
         self.estudiante_seleccionado = {}
 
+    def abrir_modal_edicion_estudiante(self, cedula: str) -> None:
+        """Carga los datos del estudiante seleccionado y abre el modal en modo edición."""
+        try:
+            cedula_str = str(cedula)
+        except Exception:
+            return
+        # Buscar el estudiante en la lista cargada en memoria
+        est = next((e for e in self.lista_estudiantes if e.get("cedula") == cedula_str), None)
+        if not est:
+            return
+        self.cedula = est.get("cedula", "")
+        self.nombre = est.get("nombre", "")
+        self.apellido = est.get("apellido", "")
+        self.carrera = est.get("carrera", "")
+        self.telefono_personal = est.get("telefono_personal", "")
+        self.periodo_inicio = est.get("periodo_inicio", "")
+        self.periodo_cierre = est.get("periodo_cierre", "")
+        self.nombre_tutor = est.get("nombre_tutor", "")
+        self.tutor_empresa = est.get("tutor_empresa", "")
+        self.nombre_empresa = est.get("nombre_empresa", "")
+        self.direccion_empresa = est.get("direccion_empresa", "")
+        self.correo_empresa = est.get("correo_empresa", "")
+        self.telefono_empresa = est.get("telefono_empresa", "")
+        self.usuario_encontrado = True
+        self.en_edicion = True
+        self.mostrar_modal = True
+
     def cerrar_modal(self) -> None:
         self.mostrar_modal = False
         self.en_edicion = False
         self.estudiante_seleccionado = {}
 
-    def fijar_busqueda_dinamica(self, val: str) -> None:
+    async def fijar_busqueda_dinamica(self, val: str) -> None:
         """Setter simple para la búsqueda dinámica en la UI. Recarga la lista de estudiantes."""
         try:
             self.busqueda_dinamica = val
         except Exception:
-            # Fallback si recibe un objeto reactivo
             self.busqueda_dinamica = str(val)
-        # Recargar resultado
-        rx.run_async(self.cargar_estudiantes())
+        await self.cargar_estudiantes()
 
-    def fijar_filtro_carrera(self, val: str) -> None:
+    async def fijar_filtro_carrera(self, val: str) -> None:
         """Setter para filtro de carrera. Recarga la lista de estudiantes."""
         try:
             self.filtro_carrera = val
         except Exception:
             self.filtro_carrera = str(val)
-        rx.run_async(self.cargar_estudiantes())
+        await self.cargar_estudiantes()
 
     async def cargar_datos_usuario(self) -> None:
         """Carga datos básicos de usuario/estudiante por cédula y los coloca en el estado.
@@ -578,19 +602,19 @@ class EstadoEstudiante(rx.State):
 
     # --- Compatibilidad con vistas antiguas: contadores y listas esperadas por inicio.py ---
     @rx.var
-    def total_estudiantes(self) -> CountProxy:
+    def total_estudiantes(self) -> int:
         """Número total de estudiantes activo."""
-        return CountProxy(int(self.total_registros))
+        return int(self.total_registros)
 
     @rx.var
-    def estudiantes_en_pasantia(self) -> CountProxy:
+    def estudiantes_en_pasantia(self) -> int:
         c = sum(1 for e in self.lista_estudiantes if e.get("nombre_tutor"))
-        return CountProxy(int(c))
+        return int(c)
 
     @rx.var
-    def estudiantes_sin_pasantia(self) -> CountProxy:
+    def estudiantes_sin_pasantia(self) -> int:
         c = sum(1 for e in self.lista_estudiantes if not e.get("nombre_tutor"))
-        return CountProxy(int(c))
+        return int(c)
 
     @rx.var
     def lista_con_pasantia(self) -> List[Dict[str, Any]]:

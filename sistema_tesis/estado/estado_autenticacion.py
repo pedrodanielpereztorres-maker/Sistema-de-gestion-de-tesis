@@ -79,7 +79,7 @@ class EstadoAutenticacion(rx.State):
             ahora = datetime.now(timezone.utc)
             if ahora < limite:
                 segundos = int((limite - ahora).total_seconds())
-                return rx.toast.error(f"Has realizado demasiados intentos. Por favor espera {segundos} segundos antes de volver a intentar.")
+                return rx.toast.error(f"⚠️ Acceso Bloqueado: Has realizado demasiados intentos de inicio de sesión. Por motivos de seguridad, por favor espera {segundos} segundos antes de volver a intentar.")
             else:
                 self.bloqueado_hasta = ""
                 self.intentos_fallidos = 0
@@ -89,7 +89,7 @@ class EstadoAutenticacion(rx.State):
         try:
             conn = obtener_conexion()
             if conn is None:
-                return rx.toast.error("No se pudo conectar al servidor. Comprueba tu conexión e inténtalo más tarde.")
+                return rx.toast.error("🔌 Fallo de Conexión: No se pudo establecer comunicación con el servidor de la base de datos. Compruebe su conexión de red o contacte al administrador.")
             
             with conn:
                 with conn.cursor() as cursor:
@@ -106,7 +106,7 @@ class EstadoAutenticacion(rx.State):
                     if resultado:
                         u_id, u_ced, u_nom, u_ape, u_cor, u_hash, u_act, u_rol = resultado
                         if not u_act:
-                            return rx.toast.error("Tu cuenta está desactivada. Contacta al administrador para más información.")
+                            return rx.toast.error("🔒 Cuenta Desactivada: Su cuenta de usuario ha sido desactivada por el administrador del sistema. Por favor, solicite asistencia para reactivarla.")
 
                         if EncriptadorContrasena.verificar(self.entrada_contrasena, u_hash):
                             # Login Exitoso
@@ -135,12 +135,12 @@ class EstadoAutenticacion(rx.State):
                     self.intentos_fallidos += 1
                     if self.intentos_fallidos >= 5:
                         self.bloqueado_hasta = (datetime.now(timezone.utc) + timedelta(minutes=5)).isoformat()
-                        return rx.toast.error("Cuenta temporalmente bloqueada por demasiados intentos. Intenta de nuevo en 5 minutos.")
-                    return rx.toast.error("Usuario o contraseña incorrectos. Verifica tus datos e inténtalo de nuevo.")
+                        return rx.toast.error("⚠️ Seguridad: Demasiados intentos fallidos consecutivos. Su cuenta ha sido bloqueada temporalmente por un lapso de 5 minutos.")
+                    return rx.toast.error("❌ Credenciales Incorrectas: El correo electrónico o la contraseña ingresados no coinciden con ningún registro activo.")
 
         except Exception as e:
             logger.error(f"Error en login: {e}", exc_info=True)
-            return rx.toast.error("Error interno. Por favor intenta más tarde o contacta soporte si el problema persiste.")
+            return rx.toast.error("💥 Error Crítico: Ocurrió una anomalía interna en el sistema al intentar procesar su solicitud. Por favor, reintente más tarde o reporte este evento a soporte.")
         finally:
             if conn:
                 conn.close()

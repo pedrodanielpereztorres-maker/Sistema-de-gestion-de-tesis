@@ -8,7 +8,7 @@ import logging
 import reflex as rx
 logger = logging.getLogger(__name__)
 from ..database_manager import obtener_conexion
-from .estado_autenticacion import EstadoAutenticacion
+from .estado_autenticacion import EstadoAutenticacion, EncriptadorContrasena
 
 
 class CountProxy:
@@ -164,9 +164,9 @@ class EstadoBoveda(rx.State):
         return len(self.tesis_a_mostrar)
 
     @rx.var
-    def total_tesis_display(self) -> CountProxy:
-        """Contenedor amigable para la UI si se necesita to_string()."""
-        return CountProxy(len(self.tesis_a_mostrar))
+    def total_tesis_display(self) -> int:
+        """Contenedor amigable para la UI."""
+        return len(self.tesis_a_mostrar)
 
     @rx.var
     def detalles_estudiante_encontrado(self) -> Dict[str, str]:
@@ -199,16 +199,13 @@ class EstadoBoveda(rx.State):
         self.tutor_empresa_encontrado = ""
         self.empresa_encontrada = ""
 
-    def fijar_busqueda_dinamica(self, val: str) -> None:
+    async def fijar_busqueda_dinamica(self, val: str) -> None:
         """Setter simple para la búsqueda dinámica en la UI. Recarga la lista de tesis."""
-        # El valor recibido puede ser un Var; convertir a str si es necesario
         try:
             self.busqueda_dinamica = val
         except Exception:
-            # Fallback si recibe un objeto reactivo
             self.busqueda_dinamica = str(val)
-        # Recargar resultado
-        rx.run_async(self.cargar_tesis())
+        await self.cargar_tesis()
 
     def fijar_cedula_busqueda(self, val: str) -> None:
         try:
@@ -235,12 +232,12 @@ class EstadoBoveda(rx.State):
         except Exception:
             self.password_confirmacion = str(val)
 
-    def fijar_filtro_carrera(self, val: str) -> None:
+    async def fijar_filtro_carrera(self, val: str) -> None:
         try:
             self.filtro_carrera = val
         except Exception:
             self.filtro_carrera = str(val)
-        rx.run_async(self.cargar_tesis())
+        await self.cargar_tesis()
 
     async def generar_reporte_tesis(self) -> rx.Component:
         try:
@@ -274,30 +271,49 @@ class EstadoBoveda(rx.State):
 
     async def confirmar_eliminacion_tesis(self) -> rx.Component:
         """Elimina la tesis indicada por tesis_id_a_eliminar si existe.
-        Nota: requiere permisos de administrador en la UI real; aquí intentamos la eliminación directa.
+        Requiere que el usuario ingrese correctamente su contraseña actual de inicio de sesión.
         """
         if not self.tesis_id_a_eliminar:
             return rx.toast.error("No hay tesis seleccionada para eliminar.")
 
+        if not self.password_confirmacion:
+            return rx.toast.error("Debe ingresar su contraseña para confirmar la eliminación.")
+
+        estado_auth = await self.get_state(EstadoAutenticacion)
+        if not estado_auth.usuario:
+            return rx.toast.error("Sesión no válida o expirada.")
+
         conn = obtener_conexion()
         if conn is None:
-            return rx.toast.error("Error de conexión al servidor.")
+            return rx.toast.error("Error de conexión al servidor de base de datos.")
 
         try:
             with conn:
                 with conn.cursor() as cursor:
+                    # Validar contraseña
+                    cursor.execute("SELECT contrasena_hash FROM usuario WHERE id = %s", (estado_auth.usuario.id,))
+                    resultado = cursor.fetchone()
+                    if not resultado:
+                        return rx.toast.error("Usuario no registrado o inactivo.")
+                    
+                    hash_almacenado = resultado[0]
+                    if not EncriptadorContrasena.verificar(self.password_confirmacion, hash_almacenado):
+                        return rx.toast.error("La contraseña ingresada es incorrecta.")
+
+                    # Proceder con la eliminación
                     cursor.execute("DELETE FROM tesis WHERE id = %s", (self.tesis_id_a_eliminar,))
                 conn.commit()
+
             await self.cargar_tesis()
             self.cerrar_modal_confirmacion()
-            return rx.toast.success("Tesis eliminada correctamente.")
+            return rx.toast.success("Tesis eliminada permanentemente de la bóveda.")
         except Exception as e:
             try:
                 conn.rollback()
             except Exception:
                 pass
             logger.exception("Error al eliminar tesis: %s", e)
-            return rx.toast.error(f"Error al eliminar tesis: {e}")
+            return rx.toast.error(f"Error al eliminar la tesis: {e}")
         finally:
             if conn:
                 try:
@@ -475,6 +491,6 @@ class EstadoBoveda(rx.State):
     # El resto del archivo se mantiene igual (métodos de eliminación, reportes, etc.)
 
     @rx.var
-    def total_tesis(self) -> CountProxy:
+    def total_tesis(self) -> int:
         """Número total de tesis cargadas (activos)."""
-        return CountProxy(len(self.lista_tesis))
+        return len(self.lista_tesis)

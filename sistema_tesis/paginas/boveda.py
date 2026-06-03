@@ -173,15 +173,18 @@ def tarjeta_tesis(tesis: rx.Var[dict]) -> rx.Component:
             rx.hstack(
                 rx.link(
                     rx.button(
-                        rx.icon("eye", size=18), "Visualizar",
-                        variant="surface", color_scheme="indigo", size="3", width="100%",
+                        rx.hstack(
+                            rx.icon("eye", size=16),
+                            rx.text("Visualizar", font_size="15px", font_weight="700"),
+                            spacing="1", align="center"
+                        ),
+                        variant="soft", color_scheme="indigo", size="2", width="100%",
                         style={
-                            "font_weight": "bold",
                             "cursor": "pointer",
-                            "border": "1px solid rgba(99,102,241,0.2)"
+                            "border_radius": "10px",
+                            "transition": "all 0.2s ease",
                         },
-                        _hover={"background_color": "#E0E7FF",
-                                "transform": "translateY(-1px)"},
+                        _hover={"background_color": "#EEF2F6", "transform": "translateY(-1px)"},
                     ),
                     href=rx.cond(
                         tesis["url"].to(str) != "",
@@ -189,28 +192,38 @@ def tarjeta_tesis(tesis: rx.Var[dict]) -> rx.Component:
                         "#"
                     ),
                     is_external=True,
-                    style={"textDecoration": "none", "flex": "1"},
+                    style={"text_decoration": "none", "flex": "1"},
                 ),
                 # Botón de descarga: SOLO para Administradores
                 rx.cond(
                     EstadoAutenticacion.rol_usuario == "administrador",
                     rx.button(
-                        rx.icon("download", size=18), "Descargar",
+                        rx.hstack(
+                            rx.icon("download", size=16),
+                            rx.text("Descargar", font_size="15px", font_weight="700"),
+                            spacing="1", align="center"
+                        ),
                         on_click=rx.download(
                             url=tesis["url"].to(str),
                             filename=f"Tesis_{tesis['cedula_estudiante'].to(str)}.pdf"
                         ),
-                        variant="solid", color_scheme="blue", size="3",
+                        variant="solid", color_scheme="indigo", size="2",
                         style={
-                            "font_weight": "bold",
                             "cursor": "pointer",
+                            "border_radius": "10px",
+                            "background": "linear-gradient(135deg, #6366F1 0%, #4338CA 100%)",
+                            "color": "white",
+                            "box_shadow": "0 2px 6px rgba(99, 102, 241, 0.15)",
+                            "transition": "all 0.2s ease",
                         },
                         flex="1",
                         _hover={
-                            "transform": "translateY(-1px)", "box_shadow": "lg"}
+                            "transform": "translateY(-1px)", 
+                            "box_shadow": "0 4px 12px rgba(99, 102, 241, 0.25)"
+                        }
                     )
                 ),
-                width="100%", padding_top="12px"
+                width="100%", padding_top="12px", spacing="3"
             ),
 
             # Botones de edición y eliminación (solo para admin o dueño)
@@ -218,38 +231,52 @@ def tarjeta_tesis(tesis: rx.Var[dict]) -> rx.Component:
                 (EstadoAutenticacion.rol_usuario == "administrador") |
                 (EstadoAutenticacion.usuario.id == tesis["usuario_id"]),
                 rx.hstack(
-                    rx.icon_button(
-                        rx.icon("pencil", size=18), "Editar",
+                    rx.button(
+                        rx.hstack(
+                            rx.icon("pencil", size=15),
+                            rx.text("Editar", font_size="15px", font_weight="700"),
+                            spacing="1", align="center"
+                        ),
                         on_click=EstadoBoveda.abrir_modal_edicion(tesis["id"]),
-                        variant="soft", color_scheme="blue", size="3",
+                        variant="soft", color_scheme="blue", size="2",
                         style={
-                            "color": "#1E3A8A",  # Blue 900
-                            "background_color": "#DBEAFE",  # Blue 100
+                            "color": "#1E40AF",  # Blue 800
+                            "background_color": "#EFF6FF",  # Blue 50
                             "border": "1px solid #BFDBFE",  # Blue 200
-                            "font_weight": "bold",
+                            "border_radius": "10px",
+                            "cursor": "pointer",
+                            "transition": "all 0.2s ease",
                         },
-                        _hover={"background_color": "#BFDBFE",
-                                "transform": "scale(1.02)"},
+                        _hover={
+                            "background_color": "#DBEAFE",
+                            "transform": "translateY(-1px)"
+                        },
                         flex="1",
                     ),
-                    rx.icon_button(
-                        rx.icon("trash-2", size=18), "Eliminar",
-                        on_click=EstadoBoveda.abrir_modal_confirmacion(
-                            tesis["id"]),
-                        variant="soft", color_scheme="red", size="3",
+                    rx.button(
+                        rx.hstack(
+                            rx.icon("trash-2", size=15),
+                            rx.text("Eliminar", font_size="15px", font_weight="700"),
+                            spacing="1", align="center"
+                        ),
+                        on_click=EstadoBoveda.abrir_modal_confirmacion(tesis["id"]),
+                        variant="soft", color_scheme="red", size="2",
                         style={
-                            "color": "#B91C1C",  # Red 800
-                            "background_color": "#FEE2E2",  # Red 100
-                            "border": "1px solid #FECACA",  # Red 200
-                            "font_weight": "bold",
+                            "color": "#991B1B",  # Red 800
+                            "background_color": "#FEF2F2",  # Red 50
+                            "border": "1px solid #FCA5A5",  # Red 200
+                            "border_radius": "10px",
+                            "cursor": "pointer",
+                            "transition": "all 0.2s ease",
                         },
-                        _hover={"background_color": "#FECACA",
-                                "transform": "scale(1.02)"},
+                        _hover={
+                            "background_color": "#FEE2E2",
+                            "transform": "translateY(-1px)"
+                        },
                         flex="1",
                     ),
-                    width="100%", spacing="3", padding_top="12px"
+                    width="100%", spacing="3", padding_top="8px"
                 ),
-                rx.box(),  # Si no tiene permisos, no muestra nada
             ),
             height="100%", padding="24px", border_radius="16px",
             background="white", border="1px solid " + COLOR_BORDE,
