@@ -239,18 +239,25 @@ class EstadoBoveda(rx.State):
             self.filtro_carrera = str(val)
         await self.cargar_tesis()
 
-    async def generar_reporte_tesis(self) -> rx.Component:
+    def generar_reporte_tesis(self):
+        if not self.lista_tesis:
+            return rx.toast.warning("No hay tesis registradas para exportar.")
         try:
             output = io.StringIO()
             writer = csv.writer(output)
-            writer.writerow(["ID", "Cédula", "Nombre", "Apellido", "Carrera", "Título", "Pública"])
+            writer.writerow(["ID", "Cédula", "Nombre", "Apellido", "Carrera", "Tutor Académico", "Tutor Empresarial", "Empresa", "Título", "Pública"])
             for t in self.lista_tesis:
                 writer.writerow([
                     t.get("id", ""), t.get("cedula_estudiante", ""), t.get("nombre_estudiante", ""),
-                    t.get("apellido_estudiante", ""), t.get("carrera", ""), t.get("titulo", ""),
-                    t.get("publico", False),
+                    t.get("apellido_estudiante", ""), t.get("carrera", ""), t.get("tutor_academico", ""),
+                    t.get("tutor_empresa", ""), t.get("nombre_empresa", ""),
+                    t.get("titulo", ""), "Sí" if t.get("publico", False) else "No",
                 ])
-            return rx.toast.success("Reporte de tesis generado (en memoria).")
+            from datetime import datetime
+            return rx.download(
+                data=output.getvalue(),
+                filename=f"reporte_boveda_{datetime.now().strftime('%d_%m_%Y')}.csv"
+            )
         except Exception as e:
             logger.error("Error al generar reporte de tesis: %s", e, exc_info=True)
             return rx.toast.error(f"Error al generar reporte: {e}")

@@ -1,5 +1,6 @@
 import logging
 import reflex as rx
+import re
 logger = logging.getLogger(__name__)
 from pydantic import BaseModel
 from datetime import date, datetime, timedelta
@@ -48,6 +49,7 @@ class EstadoEstudiante(rx.State):
     cedula: str = ""
     nombre: str = ""
     apellido: str = ""
+    correo: str = ""
     carrera: str = ""
     telefono_personal: str = ""
     periodo_inicio: str = date.today().strftime("%Y-%m-%d")
@@ -62,6 +64,7 @@ class EstadoEstudiante(rx.State):
     haciendo_tesis: bool = False
     tutor_academico_seleccionado: str = ""
     tutores_disponibles: list[str] = []
+    tutores_mapeo: list[dict] = []
 
     filtro_carrera: str = ""
     filtro_estado: str = "Todos"
@@ -117,9 +120,10 @@ class EstadoEstudiante(rx.State):
                             e.celular, e.periodo_inicio, e.periodo_cierre,
                             ta.nombre || ' ' || ta.apellido as tutor_acad,
                             te.nombre as tutor_emp, emp.nombre as empresa_nom,
-                            emp.direccion, te.correo, te.telefono
+                            emp.direccion, te.correo, te.telefono, u.correo
                         FROM estudiante e
                         JOIN carrera c ON e.carrera_id = c.id
+                        LEFT JOIN usuario u ON e.usuario_id = u.id
                         LEFT JOIN tutor_academico ta ON e.tutor_academico_id = ta.id
                         LEFT JOIN tutor_empresarial te ON e.tutor_empresarial_id = te.id
                         LEFT JOIN empresa emp ON te.empresa_id = emp.id
@@ -143,7 +147,8 @@ class EstadoEstudiante(rx.State):
                             "fecha_cierre_formateada": r[6].strftime("%d/%m/%Y") if r[6] else "",
                             "nombre_tutor": r[7] or "", "tutor_empresa": r[8] or "",
                             "nombre_empresa": r[9] or "", "direccion_empresa": r[10] or "",
-                            "correo_empresa": r[11] or "", "telefono_empresa": r[12] or ""
+                            "correo_empresa": r[11] or "", "telefono_empresa": r[12] or "",
+                            "correo": r[13] or ""
                         } for r in rows
                     ]
 
@@ -226,8 +231,27 @@ class EstadoEstudiante(rx.State):
         self.mostrar_modal = True
         self.en_edicion = False
         self.estudiante_seleccionado = {}
+        self.cedula = ""
+        self.nombre = ""
+        self.apellido = ""
+        self.correo = ""
+        self.carrera = ""
+        self.telefono_personal = ""
+        self.periodo_inicio = date.today().strftime("%Y-%m-%d")
+        self.periodo_cierre = (
+            date.today() + timedelta(weeks=12)).strftime("%Y-%m-%d")
+        self.nombre_tutor = ""
+        self.tutor_empresa = ""
+        self.nombre_empresa = ""
+        self.direccion_empresa = ""
+        self.correo_empresa = ""
+        self.telefono_empresa = ""
+        self.haciendo_tesis = False
+        self.tutor_academico_seleccionado = ""
+        self.tutores_mapeo = []
+        self.usuario_encontrado = False
 
-    def abrir_modal_edicion_estudiante(self, cedula: str) -> None:
+    async def abrir_modal_edicion_estudiante(self, cedula: str) -> None:
         """Carga los datos del estudiante seleccionado y abre el modal en modo edición."""
         try:
             cedula_str = str(cedula)
@@ -240,6 +264,7 @@ class EstadoEstudiante(rx.State):
         self.cedula = est.get("cedula", "")
         self.nombre = est.get("nombre", "")
         self.apellido = est.get("apellido", "")
+        self.correo = est.get("correo", "")
         self.carrera = est.get("carrera", "")
         self.telefono_personal = est.get("telefono_personal", "")
         self.periodo_inicio = est.get("periodo_inicio", "")
@@ -250,6 +275,14 @@ class EstadoEstudiante(rx.State):
         self.direccion_empresa = est.get("direccion_empresa", "")
         self.correo_empresa = est.get("correo_empresa", "")
         self.telefono_empresa = est.get("telefono_empresa", "")
+
+        self.haciendo_tesis = bool(self.nombre_tutor)
+        if self.carrera:
+            await self.cargar_tutores_por_carrera(self.carrera)
+            self.tutor_academico_seleccionado = self.nombre_tutor
+        else:
+            self.tutor_academico_seleccionado = ""
+
         self.usuario_encontrado = True
         self.en_edicion = True
         self.mostrar_modal = True
@@ -291,18 +324,20 @@ class EstadoEstudiante(rx.State):
             with conn:
                 with conn.cursor() as cursor:
                     cursor.execute(
-                        "SELECT nombre, apellido FROM usuario WHERE cedula = %s AND esta_activo = TRUE",
+                        "SELECT nombre, apellido, correo FROM usuario WHERE cedula = %s AND esta_activo = TRUE",
                         (ced,)
                     )
                     row = cursor.fetchone()
                     if row:
                         self.nombre = row[0] or ""
                         self.apellido = row[1] or ""
+                        self.correo = row[2] or ""
                         self.usuario_encontrado = True
                     else:
                         # No existe usuario; limpiar campos relevantes
                         self.nombre = ""
                         self.apellido = ""
+                        self.correo = ""
                         self.usuario_encontrado = False
 
                     # Intentar cargar datos de estudiante si existe
@@ -335,6 +370,14 @@ class EstadoEstudiante(rx.State):
             except Exception:
                 pass
 
+        if self.carrera:
+            await self.cargar_tutores_por_carrera(self.carrera)
+            self.haciendo_tesis = bool(self.nombre_tutor)
+            self.tutor_academico_seleccionado = self.nombre_tutor
+        else:
+            self.haciendo_tesis = False
+            self.tutor_academico_seleccionado = ""
+
     async def cargar_tutores_por_carrera(self, carrera: str = None) -> None:
         """Llena self.tutores_disponibles con tutores académicos para la carrera indicada.
         Si carrera es None, usa self.carrera.
@@ -342,21 +385,26 @@ class EstadoEstudiante(rx.State):
         carrera_nombre = (carrera or self.carrera or "").strip()
         if not carrera_nombre:
             self.tutores_disponibles = []
+            self.tutores_mapeo = []
             return
         conn = obtener_conexion()
         if conn is None:
             self.tutores_disponibles = []
+            self.tutores_mapeo = []
             return
         try:
             with conn:
                 with conn.cursor() as cursor:
                     cursor.execute("SELECT ta.id, ta.nombre || ' ' || ta.apellido FROM tutor_academico ta JOIN carrera c ON ta.carrera_id = c.id WHERE c.nombre = %s AND ta.esta_activo = TRUE ORDER BY ta.nombre", (carrera_nombre,))
                     rows = cursor.fetchall()
-                    # Guardar como lista de strings "id|Nombre Apellido" o solo nombre según uso en UI
-                    self.tutores_disponibles = [f"{r[0]}|{r[1]}" for r in rows]
+                    # Guardar la lista de nombres para la UI
+                    self.tutores_disponibles = [r[1] for r in rows]
+                    # Guardar el mapeo id -> nombre completo
+                    self.tutores_mapeo = [{"id": r[0], "nombre": r[1]} for r in rows]
         except Exception as e:
             logger.exception("Error al cargar tutores por carrera: %s", e)
             self.tutores_disponibles = []
+            self.tutores_mapeo = []
         finally:
             try:
                 conn.close()
@@ -434,8 +482,13 @@ class EstadoEstudiante(rx.State):
         """Inserta o actualiza un estudiante y usuario según el estado de edición.
         Valida coherencia de fechas y realiza las operaciones en BD de forma segura.
         """
-        if not self.cedula or not self.nombre or not self.apellido:
-            return rx.toast.error("Cédula, nombre y apellido son obligatorios.")
+        if not self.cedula or not self.nombre or not self.apellido or not self.correo:
+            return rx.toast.error("Cédula, nombre, apellido y correo son obligatorios.")
+
+        # Validar formato básico del correo
+        patron_correo = r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$'
+        if not re.match(patron_correo, self.correo.strip()):
+            return rx.toast.error("El correo del estudiante no tiene un formato válido.")
 
         # Validación de fechas antes de tocar la BD
         try:
@@ -462,15 +515,38 @@ class EstadoEstudiante(rx.State):
         try:
             with conn:
                 with conn.cursor() as cursor:
+                    # Validar que el correo no esté ocupado por otro usuario
+                    cursor.execute("SELECT 1 FROM usuario WHERE LOWER(correo) = LOWER(%s) AND cedula <> %s", (self.correo.strip(), self.cedula))
+                    correo_in_use = cursor.fetchone()
+                    if correo_in_use:
+                        return rx.toast.error("El correo ya está registrado para otro usuario.")
+
                     # Asegurar existencia de usuario
-                    cursor.execute("SELECT 1 FROM usuario WHERE cedula = %s", (self.cedula,))
+                    cursor.execute("SELECT id FROM usuario WHERE cedula = %s", (self.cedula,))
                     exists = cursor.fetchone()
                     if not exists:
-                        # Crear usuario básico (contraseña no gestionada aquí)
+                        # Crear usuario básico (contraseña inicial: su propia cédula)
+                        from .estado_autenticacion import EncriptadorContrasena
+                        hash_clave = EncriptadorContrasena.encriptar(self.cedula)
+
+                        # Intentar obtener el rol 'estudiante' si existe
+                        cursor.execute("SELECT id FROM rol WHERE LOWER(nombre) = 'estudiante'")
+                        rol_row = cursor.fetchone()
+                        rol_id = rol_row[0] if rol_row else None
+
                         cursor.execute(
-                            "INSERT INTO usuario (cedula, nombre, apellido, esta_activo) VALUES (%s, %s, %s, TRUE)",
-                            (self.cedula, self.nombre, self.apellido)
+                            "INSERT INTO usuario (cedula, nombre, apellido, correo, contrasena_hash, rol_id, esta_activo) VALUES (%s, %s, %s, %s, %s, %s, TRUE) RETURNING id",
+                            (self.cedula, self.nombre, self.apellido, self.correo.strip().lower(), hash_clave, rol_id)
                         )
+                        usuario_id = cursor.fetchone()[0]
+                    else:
+                        usuario_id = exists[0]
+                        # Actualizar nombre, apellido y correo en la tabla usuario
+                        cursor.execute(
+                            "UPDATE usuario SET nombre = %s, apellido = %s, correo = %s WHERE id = %s",
+                            (self.nombre, self.apellido, self.correo.strip().lower(), usuario_id)
+                        )
+
                     # Obtener id de carrera
                     carrera_id = None
                     if self.carrera:
@@ -478,18 +554,73 @@ class EstadoEstudiante(rx.State):
                         r = cursor.fetchone()
                         if r:
                             carrera_id = r[0]
+
+                    # Obtener id de tutor académico
+                    tutor_academico_id = None
+                    if self.haciendo_tesis and self.tutor_academico_seleccionado:
+                        for t in self.tutores_mapeo:
+                            if t["nombre"] == self.tutor_academico_seleccionado:
+                                tutor_academico_id = t["id"]
+                                break
+                        if tutor_academico_id is None:
+                            # Intento de respaldo buscando en BD
+                            cursor.execute(
+                                "SELECT id FROM tutor_academico WHERE nombre || ' ' || apellido = %s AND esta_activo = TRUE",
+                                (self.tutor_academico_seleccionado,)
+                            )
+                            t_row = cursor.fetchone()
+                            if t_row:
+                                tutor_academico_id = t_row[0]
+
+                    # Gestionar empresa y tutor empresarial
+                    tutor_empresarial_id = None
+                    if self.nombre_empresa.strip():
+                        # Obtener o crear empresa
+                        cursor.execute("SELECT id FROM empresa WHERE nombre = %s", (self.nombre_empresa.strip(),))
+                        emp_row = cursor.fetchone()
+                        if emp_row:
+                            empresa_id = emp_row[0]
+                            # Actualizar dirección
+                            cursor.execute("UPDATE empresa SET direccion = %s WHERE id = %s", (self.direccion_empresa.strip(), empresa_id))
+                        else:
+                            cursor.execute(
+                                "INSERT INTO empresa (nombre, direccion) VALUES (%s, %s) RETURNING id",
+                                (self.nombre_empresa.strip(), self.direccion_empresa.strip())
+                            )
+                            empresa_id = cursor.fetchone()[0]
+
+                        # Obtener o crear tutor empresarial
+                        if self.tutor_empresa.strip():
+                            cursor.execute(
+                                "SELECT id FROM tutor_empresarial WHERE nombre = %s AND empresa_id = %s",
+                                (self.tutor_empresa.strip(), empresa_id)
+                            )
+                            te_row = cursor.fetchone()
+                            if te_row:
+                                tutor_empresarial_id = te_row[0]
+                                cursor.execute(
+                                    "UPDATE tutor_empresarial SET correo = %s, telefono = %s WHERE id = %s",
+                                    (self.correo_empresa.strip(), self.telefono_empresa.strip(), tutor_empresarial_id)
+                                )
+                            else:
+                                cursor.execute(
+                                    "INSERT INTO tutor_empresarial (nombre, correo, telefono, empresa_id) VALUES (%s, %s, %s, %s) RETURNING id",
+                                    (self.tutor_empresa.strip(), self.correo_empresa.strip(), self.telefono_empresa.strip(), empresa_id)
+                                )
+                                tutor_empresarial_id = cursor.fetchone()[0]
+
                     # Si estamos en edición, actualizar fila de estudiante
                     cursor.execute("SELECT 1 FROM estudiante WHERE cedula = %s", (self.cedula,))
                     est_exists = cursor.fetchone()
                     if est_exists:
                         cursor.execute(
-                            "UPDATE estudiante SET nombre=%s, apellido=%s, carrera_id=%s, celular=%s, periodo_inicio=%s, periodo_cierre=%s WHERE cedula=%s",
-                            (self.nombre, self.apellido, carrera_id, self.telefono_personal, inicio, cierre, self.cedula)
+                            "UPDATE estudiante SET nombre=%s, apellido=%s, carrera_id=%s, celular=%s, periodo_inicio=%s, periodo_cierre=%s, usuario_id=%s, tutor_academico_id=%s, tutor_empresarial_id=%s WHERE cedula=%s",
+                            (self.nombre, self.apellido, carrera_id, self.telefono_personal, inicio, cierre, usuario_id, tutor_academico_id, tutor_empresarial_id, self.cedula)
                         )
                     else:
                         cursor.execute(
-                            "INSERT INTO estudiante (cedula, nombre, apellido, carrera_id, celular, periodo_inicio, periodo_cierre, esta_activo) VALUES (%s,%s,%s,%s,%s,%s,%s,TRUE)",
-                            (self.cedula, self.nombre, self.apellido, carrera_id, self.telefono_personal, inicio, cierre)
+                            "INSERT INTO estudiante (cedula, nombre, apellido, carrera_id, celular, periodo_inicio, periodo_cierre, esta_activo, usuario_id, tutor_academico_id, tutor_empresarial_id) VALUES (%s,%s,%s,%s,%s,%s,%s,TRUE,%s,%s,%s)",
+                            (self.cedula, self.nombre, self.apellido, carrera_id, self.telefono_personal, inicio, cierre, usuario_id, tutor_academico_id, tutor_empresarial_id)
                         )
                 conn.commit()
             await self.cargar_estudiantes()
@@ -592,6 +723,12 @@ class EstadoEstudiante(rx.State):
             self.carrera = val
         except Exception:
             self.carrera = str(val)
+
+    def fijar_correo(self, val: str) -> None:
+        try:
+            self.correo = val
+        except Exception:
+            self.correo = str(val)
 
     def fijar_password_confirmacion(self, val: str) -> None:
         try:

@@ -189,8 +189,22 @@ def contenido_reportes() -> rx.Component:
                                 align="center", width="100%"
                             ),
                             rx.vstack(
-                                rx.hstack(rx.icon("mail", size=12, color="#64748B"), rx.text(item["correo"], size="1", color="#64748B"), spacing="1"),
-                                rx.hstack(rx.icon("phone", size=12, color="#64748B"), rx.text(item["telefono"], size="1", color="#64748B"), spacing="1"),
+                                rx.hstack(
+                                    rx.icon("mail", size=12, color="#64748B"),
+                                    rx.text(
+                                        rx.cond(item["correo"], item["correo"], "No registrado"),
+                                        size="1", color="#64748B", font_style=rx.cond(item["correo"], "normal", "italic")
+                                    ),
+                                    spacing="1"
+                                ),
+                                rx.hstack(
+                                    rx.icon("phone", size=12, color="#64748B"),
+                                    rx.text(
+                                        rx.cond(item["telefono"], item["telefono"], "No registrado"),
+                                        size="1", color="#64748B", font_style=rx.cond(item["telefono"], "normal", "italic")
+                                    ),
+                                    spacing="1"
+                                ),
                                 align="start", spacing="1"
                             ),
                             rx.badge(

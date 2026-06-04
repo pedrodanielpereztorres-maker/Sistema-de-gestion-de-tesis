@@ -31,6 +31,9 @@ class EstadoReportes(rx.State):
         if not boveda.lista_tesis:
             await boveda.cargar_tesis()
         
+        if not boveda.lista_tesis:
+            return rx.toast.warning("No hay tesis registradas para exportar.")
+        
         return boveda.generar_reporte_tesis()
 
     async def cargar_reportes(self):
@@ -86,12 +89,13 @@ class EstadoReportes(rx.State):
                     self.mejores_tutores = [{"nombre": r[0], "cantidad": r[1]} for r in cursor.fetchall()]
 
                     # 4. Todas las Empresas (con conteo de pasantes)
+                    # Correo y teléfono se toman del tutor empresarial asociado
                     cursor.execute("""
-                        SELECT emp.nombre, emp.direccion, emp.correo, emp.telefono, COUNT(e.id) as cantidad
+                        SELECT emp.nombre, emp.direccion, MAX(te.correo), MAX(te.telefono), COUNT(e.id) as cantidad
                         FROM empresa emp
                         LEFT JOIN tutor_empresarial te ON emp.id = te.empresa_id
                         LEFT JOIN estudiante e ON te.id = e.tutor_empresarial_id AND e.esta_activo = TRUE
-                        GROUP BY emp.id, emp.nombre, emp.direccion, emp.correo, emp.telefono
+                        GROUP BY emp.id, emp.nombre, emp.direccion
                         ORDER BY cantidad DESC, emp.nombre ASC
                     """)
                     self.mejores_empresas = [
@@ -193,10 +197,11 @@ class EstadoReportes(rx.State):
                 
                 # Control de longitud para evitar desbordamiento
                 nombre = (emp["nombre"][:35] + '..') if len(emp["nombre"]) > 37 else emp["nombre"]
-                correo = (emp["correo"][:40] + '..') if len(emp["correo"]) > 42 else emp["correo"]
+                correo_val = emp["correo"] or "N/A"
+                correo_val = (correo_val[:40] + '..') if len(correo_val) > 42 else correo_val
                 
                 pdf.cell(65, 8, nombre, 1, 0, 'L', relleno)
-                pdf.cell(75, 8, correo, 1, 0, 'L', relleno)
+                pdf.cell(75, 8, correo_val, 1, 0, 'L', relleno)
                 pdf.cell(30, 8, emp["telefono"] or "N/A", 1, 0, 'C', relleno)
                 pdf.cell(20, 8, str(emp["cantidad"]), 1, 1, 'C', relleno)
                 relleno = not relleno

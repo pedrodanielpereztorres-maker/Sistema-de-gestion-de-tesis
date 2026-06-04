@@ -276,6 +276,13 @@ def modal_registrar_estudiante() -> rx.Component:
                                     solo_lectura=EstadoEstudiante.usuario_encontrado
                                 ),
                                 campo_texto(
+                                    "Correo Estudiante",
+                                    EstadoEstudiante.correo,
+                                    EstadoEstudiante.fijar_correo,
+                                    solo_lectura=EstadoEstudiante.usuario_encontrado,
+                                    tipo="email"
+                                ),
+                                campo_texto(
                                     "Teléfono Estudiante",
                                     EstadoEstudiante.telefono_personal,
                                     EstadoEstudiante.fijar_telefono_personal,

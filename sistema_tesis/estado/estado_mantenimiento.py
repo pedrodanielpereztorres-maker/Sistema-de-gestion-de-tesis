@@ -358,6 +358,12 @@ class EstadoMantenimiento(rx.State):
             return rx.toast.warning("Seleccione una carrera para el tutor.")
         if not self.t_cedula or not self.t_nombre:
             return rx.toast.warning("Cédula y Nombre son obligatorios.")
+
+        # Validar que se ingrese al menos nombre y apellido
+        nom_parts = self.t_nombre.strip().split(" ")
+        if len(nom_parts) < 2:
+            return rx.toast.warning("Por favor, ingrese el nombre y el apellido del tutor en el campo Nombre Completo.")
+
         conn = obtener_conexion()
         if conn is None:
             return rx.toast.error("Error de conexión al servidor.")
@@ -374,7 +380,6 @@ class EstadoMantenimiento(rx.State):
                     if not c_id:
                         return rx.toast.error("La carrera seleccionada no existe.")
 
-                    nom_parts = self.t_nombre.split(" ")
                     nombre = u_id[1] if u_id else nom_parts[0]
                     apellido = u_id[2] if u_id else (" ".join(nom_parts[1:]))
 
