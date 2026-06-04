@@ -24,8 +24,7 @@ class EstadoReportes(rx.State):
 
     async def exportar_tesis_csv(self):
         """
-        Centraliza la exportación de tesis desde el panel de reportes.
-        Llama al método existente en EstadoBoveda.
+        Genera y descarga un CSV con todas las tesis registradas.
         """
         boveda = await self.get_state(EstadoBoveda)
         if not boveda.lista_tesis:
@@ -34,7 +33,24 @@ class EstadoReportes(rx.State):
         if not boveda.lista_tesis:
             return rx.toast.warning("No hay tesis registradas para exportar.")
         
-        return boveda.generar_reporte_tesis()
+        try:
+            salida = io.StringIO()
+            escritor = csv.writer(salida)
+            escritor.writerow(["ID", "Cédula", "Nombre", "Apellido", "Carrera", "Tutor Académico", "Tutor Empresarial", "Empresa", "Título", "Pública"])
+            for t in boveda.lista_tesis:
+                escritor.writerow([
+                    t.get("id", ""), t.get("cedula_estudiante", ""), t.get("nombre_estudiante", ""),
+                    t.get("apellido_estudiante", ""), t.get("carrera", ""), t.get("tutor_academico", ""),
+                    t.get("tutor_empresa", ""), t.get("nombre_empresa", ""),
+                    t.get("titulo", ""), "Sí" if t.get("publico", False) else "No",
+                ])
+            return rx.download(
+                data=salida.getvalue(),
+                filename=f"reporte_boveda_{datetime.now().strftime('%d_%m_%Y')}.csv"
+            )
+        except Exception as e:
+            logger.exception("Error al generar reporte de bóveda: %s", e)
+            return rx.toast.error(f"Error al generar reporte: {e}")
 
     async def cargar_reportes(self):
         """Carga todos los datos analíticos desde la base de datos."""
