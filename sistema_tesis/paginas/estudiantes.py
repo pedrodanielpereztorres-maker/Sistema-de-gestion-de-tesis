@@ -63,7 +63,12 @@ def modal_seguridad_estudiante() -> rx.Component:
                                 "border": "1.5px solid #CBD5E1",
                                 "border_radius": "10px",
                                 "font_weight": "500",
-                                "&::placeholder": {"color": "#94A3B8"},
+                                "&::placeholder": {
+                                    "color": "#94A3B8",
+                                    "opacity": "0.85",
+                                    "font_weight": "500",
+                                    "letter_spacing": "0.01em",
+                                },
                             },
                             _focus={
                                 "border_color": "#6366F1",

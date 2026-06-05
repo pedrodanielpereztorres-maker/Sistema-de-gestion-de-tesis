@@ -429,9 +429,11 @@ def modal_nueva_tesis() -> rx.Component:
                                         "font_size":     "13.5px",
                                         "font_weight":   "bold",
                                         "&::placeholder": {
-                                            "color": "#64748B",
-                                            "opacity": "1",
-                                        },
+                                    "color": "#94A3B8",
+                                    "opacity": "0.85",
+                                    "font_weight": "500",
+                                    "letter_spacing": "0.01em",
+                                },
                                     },
                                     _focus={
                                         "border_color": COLOR_PRIMARIO,
@@ -482,7 +484,19 @@ def modal_nueva_tesis() -> rx.Component:
                                         on_change=EstadoBoveda.fijar_titulo_tesis,
                                         value=EstadoBoveda.titulo_tesis,
                                         width="100%",
-                                        style={"min_height": "125px", "border": "1.5px solid #CBD5E1", "font_size": "13.5px", "resize": "none", "color": "black"}
+                                        style={
+                                            "min_height": "125px",
+                                            "border": "1.5px solid #CBD5E1",
+                                            "font_size": "13.5px",
+                                            "resize": "none",
+                                            "color": "black",
+                                            "&::placeholder": {
+                                    "color": "#94A3B8",
+                                    "opacity": "0.85",
+                                    "font_weight": "500",
+                                    "letter_spacing": "0.01em",
+                                },
+                                        }
                                     ),
                                     rx.hstack(
                                         rx.checkbox(on_change=EstadoBoveda.fijar_hacer_publico, checked=EstadoBoveda.hacer_publico, color_scheme="indigo"),
@@ -711,7 +725,12 @@ def modal_confirmar_eliminacion_tesis() -> rx.Component:
                             style={
                                 "border": "1.5px solid #64748B",
                                 "font_weight": "bold",
-                                "&::placeholder": {"color": "#000000", "opacity": "1", "font_weight": "bold"},
+                                "&::placeholder": {
+                                    "color": "#94A3B8",
+                                    "opacity": "0.85",
+                                    "font_weight": "500",
+                                    "letter_spacing": "0.01em",
+                                },
                             },
                         ),
                         width="100%", spacing="2", align="start"
@@ -771,9 +790,11 @@ def contenido_boveda() -> rx.Component:
                     "font_size": "15px",
                     "font_weight": "500",
                     "&::placeholder": {
-                        "color": "#64748B",
-                        "opacity": "1",
-                    },
+                                    "color": "#94A3B8",
+                                    "opacity": "0.85",
+                                    "font_weight": "500",
+                                    "letter_spacing": "0.01em",
+                                },
                 },
                 _focus={"border_color": "#6366F1"},
                 _hover={"border_color": "#6366F1"},

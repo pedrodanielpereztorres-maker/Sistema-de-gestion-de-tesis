@@ -1,4 +1,5 @@
 import logging
+import math
 import re
 import reflex as rx
 from pydantic import BaseModel
@@ -54,6 +55,11 @@ class EstadoMantenimiento(rx.State):
     busqueda_tutores: str = ""
     busqueda_roles: str = ""
     busqueda_carreras: str = ""
+    usuarios_pagina_actual: int = 1
+    tutores_pagina_actual: int = 1
+    roles_pagina_actual: int = 1
+    carreras_pagina_actual: int = 1
+    registros_por_pagina: int = 10
     modal_usuario_abierto: bool = False
     modal_tutor_abierto: bool = False
     modal_rol_abierto: bool = False
@@ -100,7 +106,7 @@ class EstadoMantenimiento(rx.State):
                     """)
                     self.usuarios = [
                         UsuarioSistema(id=u[0], cedula=u[1], nombre=u[2], apellido=u[3],
-                                       correo=u[4], rol=u[5] or "Sin Rol", esta_activo=bool(u[6]), clave="")
+                                       correo=u[4] or "", rol=u[5] or "Sin Rol", esta_activo=bool(u[6]), clave="")
                         for u in cursor.fetchall()
                     ]
                     # Roles
@@ -333,10 +339,22 @@ class EstadoMantenimiento(rx.State):
     def cerrar_modal_carrera(self):
         self.modal_carrera_abierto = False
 
-    def fijar_busqueda_usuarios(self, val: str) -> None: self.busqueda_usuarios = val
-    def fijar_busqueda_tutores(self, val: str) -> None: self.busqueda_tutores = val
-    def fijar_busqueda_roles(self, val: str) -> None: self.busqueda_roles = val
-    def fijar_busqueda_carreras(self, val: str) -> None: self.busqueda_carreras = val
+    def fijar_busqueda_usuarios(self, val: str) -> None:
+        self.busqueda_usuarios = val
+        self.usuarios_pagina_actual = 1
+
+    def fijar_busqueda_tutores(self, val: str) -> None:
+        self.busqueda_tutores = val
+        self.tutores_pagina_actual = 1
+
+    def fijar_busqueda_roles(self, val: str) -> None:
+        self.busqueda_roles = val
+        self.roles_pagina_actual = 1
+
+    def fijar_busqueda_carreras(self, val: str) -> None:
+        self.busqueda_carreras = val
+        self.carreras_pagina_actual = 1
+
     def fijar_u_cedula(self, val: str) -> None: self.u_cedula = val
     def fijar_u_nombre(self, val: str) -> None: self.u_nombre = val
     def fijar_u_apellido(self, val: str) -> None: self.u_apellido = val
@@ -352,6 +370,90 @@ class EstadoMantenimiento(rx.State):
     def fijar_t_telefono(self, val: str) -> None: self.t_telefono = val
     def fijar_t_carrera(self, val: str) -> None: self.t_carrera = val
     def fijar_t_especialidad(self, val: str) -> None: self.t_especialidad = val
+
+    @rx.var
+    def usuarios_paginados(self) -> list[UsuarioSistema]:
+        inicio = (self.usuarios_pagina_actual - 1) * self.registros_por_pagina
+        return self.usuarios_filtrados[inicio: inicio + self.registros_por_pagina]
+
+    @rx.var
+    def usuarios_total_paginas(self) -> int:
+        return max(1, math.ceil(len(self.usuarios_filtrados) / self.registros_por_pagina))
+
+    @rx.var
+    def usuarios_total_registros(self) -> int:
+        return len(self.usuarios_filtrados)
+
+    def usuarios_pagina_anterior(self) -> None:
+        if self.usuarios_pagina_actual > 1:
+            self.usuarios_pagina_actual -= 1
+
+    def usuarios_pagina_siguiente(self) -> None:
+        if self.usuarios_pagina_actual < self.usuarios_total_paginas:
+            self.usuarios_pagina_actual += 1
+
+    @rx.var
+    def tutores_paginados(self) -> list[TutorAcademico]:
+        inicio = (self.tutores_pagina_actual - 1) * self.registros_por_pagina
+        return self.tutores_filtrados[inicio: inicio + self.registros_por_pagina]
+
+    @rx.var
+    def tutores_total_paginas(self) -> int:
+        return max(1, math.ceil(len(self.tutores_filtrados) / self.registros_por_pagina))
+
+    @rx.var
+    def tutores_total_registros(self) -> int:
+        return len(self.tutores_filtrados)
+
+    def tutores_pagina_anterior(self) -> None:
+        if self.tutores_pagina_actual > 1:
+            self.tutores_pagina_actual -= 1
+
+    def tutores_pagina_siguiente(self) -> None:
+        if self.tutores_pagina_actual < self.tutores_total_paginas:
+            self.tutores_pagina_actual += 1
+
+    @rx.var
+    def roles_paginados(self) -> list[Rol]:
+        inicio = (self.roles_pagina_actual - 1) * self.registros_por_pagina
+        return self.roles_filtrados[inicio: inicio + self.registros_por_pagina]
+
+    @rx.var
+    def roles_total_paginas(self) -> int:
+        return max(1, math.ceil(len(self.roles_filtrados) / self.registros_por_pagina))
+
+    @rx.var
+    def roles_total_registros(self) -> int:
+        return len(self.roles_filtrados)
+
+    def roles_pagina_anterior(self) -> None:
+        if self.roles_pagina_actual > 1:
+            self.roles_pagina_actual -= 1
+
+    def roles_pagina_siguiente(self) -> None:
+        if self.roles_pagina_actual < self.roles_total_paginas:
+            self.roles_pagina_actual += 1
+
+    @rx.var
+    def carreras_paginadas(self) -> list[Carrera]:
+        inicio = (self.carreras_pagina_actual - 1) * self.registros_por_pagina
+        return self.carreras_filtradas[inicio: inicio + self.registros_por_pagina]
+
+    @rx.var
+    def carreras_total_paginas(self) -> int:
+        return max(1, math.ceil(len(self.carreras_filtradas) / self.registros_por_pagina))
+
+    @rx.var
+    def carreras_total_registros(self) -> int:
+        return len(self.carreras_filtradas)
+
+    def carreras_pagina_anterior(self) -> None:
+        if self.carreras_pagina_actual > 1:
+            self.carreras_pagina_actual -= 1
+
+    def carreras_pagina_siguiente(self) -> None:
+        if self.carreras_pagina_actual < self.carreras_total_paginas:
+            self.carreras_pagina_actual += 1
 
     async def guardar_tutor(self):
         if not self.t_carrera:
@@ -567,6 +669,40 @@ class EstadoMantenimiento(rx.State):
                 except Exception:
                     pass
 
+    async def eliminar_usuario(self, id_usuario: int):
+        from .estado_autenticacion import EstadoAutenticacion
+        estado_auth = await self.get_state(EstadoAutenticacion)
+
+        if estado_auth.usuario and estado_auth.usuario.id == id_usuario:
+            return rx.toast.warning("Por motivos de seguridad, no puedes eliminar tu propia cuenta administrativa.")
+
+        conn = obtener_conexion()
+        if conn is None:
+            logger.error("Sin conexión para eliminar usuario.")
+            return rx.toast.error("Error de conexión al servidor.")
+        try:
+            with conn:
+                with conn.cursor() as cursor:
+                    cursor.execute(
+                        "SELECT EXISTS(SELECT 1 FROM estudiante WHERE usuario_id = %s) OR EXISTS(SELECT 1 FROM tutor_academico WHERE usuario_id = %s);",
+                        (id_usuario, id_usuario)
+                    )
+                    if cursor.fetchone()[0]:
+                        return rx.toast.error("No se puede eliminar: cuenta con datos asociados. Desactívela en su lugar.")
+                    cursor.execute("DELETE FROM usuario WHERE id = %s;", (id_usuario,))
+                    conn.commit()
+            self.cargar_datos()
+            return rx.toast.success("Cuenta eliminada correctamente.")
+        except Exception as e:
+            logger.exception("Error al eliminar usuario: %s", e)
+            return rx.toast.error(f"Error al eliminar cuenta: {e}")
+        finally:
+            if conn:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+
     def alternar_estado_carrera(self, id_carrera: int):
         conn = obtener_conexion()
         if conn is None:
@@ -630,10 +766,10 @@ class EstadoMantenimiento(rx.State):
     async def confirmar_eliminar_rol(self):
         """Verifica la contraseña del administrador contra el hash en BD y elimina el rol si coincide.
 
-        Se usa obtener_conexion() y EstadoAutenticacion.verificar_clave() para evitar comparar texto plano
+        Se usa obtener_conexion() y EncriptadorContrasena.verificar() para evitar comparar texto plano
         y garantizar que solo un administrador autenticado pueda eliminar roles.
         """
-        from .estado_autenticacion import EstadoAutenticacion
+        from .estado_autenticacion import EstadoAutenticacion, EncriptadorContrasena
         auth_state = await self.get_state(EstadoAutenticacion)
         admin_id = auth_state.usuario.id if auth_state.usuario else None
         if admin_id is None:
@@ -655,7 +791,7 @@ class EstadoMantenimiento(rx.State):
                     hash_almacenado = fila[0]
 
             # Verificar la contraseña usando el helper del estado de autenticación
-            if EstadoAutenticacion.verificar_clave(self.password_confirmacion, hash_almacenado):
+            if EncriptadorContrasena.verificar(self.password_confirmacion, hash_almacenado):
                 res = self.eliminar_rol(self.id_rol_eliminar)
                 if isinstance(res, rx.Component):
                     return res

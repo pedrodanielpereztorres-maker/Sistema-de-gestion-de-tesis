@@ -60,15 +60,17 @@ def barra_herramientas(titulo: str, placeholder_busqueda: str, valor_busqueda: r
                         "color": COLOR_TEXTO_BOLD,  # Texto del input en negro
                         "font_weight": "bold",
                         "&::placeholder": {
-                            "color": "#000000",  # Negro puro
-                            "opacity": "1",
-                            "font_weight": "bold",
-                        },
-                        "& input::placeholder": {
-                            "color": "#000000",
-                            "opacity": "1",
-                            "font_weight": "bold",
-                        }
+                                    "color": "#94A3B8",
+                                    "opacity": "0.85",
+                                    "font_weight": "500",
+                                    "letter_spacing": "0.01em",
+                                },
+                        "&::placeholder": {
+                                    "color": "#94A3B8",
+                                    "opacity": "0.85",
+                                    "font_weight": "500",
+                                    "letter_spacing": "0.01em",
+                                }
                     },
                     _focus={
                         "border_color": COLOR_PRIMARIO,
@@ -238,14 +240,80 @@ def fila_usuario(user: UsuarioSistema) -> rx.Component:
                                 "Desactivar Cuenta", "Activar Cuenta")
                     )
                 ),
+                rx.icon_button(
+                    rx.icon("trash-2", size=14),
+                    on_click=lambda: EstadoMantenimiento.eliminar_usuario(user.id),
+                    variant="ghost",
+                    color_scheme="red",
+                    size="2",
+                    cursor=rx.cond(EstadoAutenticacion.usuario.id ==
+                                   user.id, "not-allowed", "pointer"),
+                    disabled=rx.cond(
+                        EstadoAutenticacion.usuario.id == user.id, True, False),
+                    title=rx.cond(
+                        EstadoAutenticacion.usuario.id == user.id,
+                        "No puedes eliminar tu propia cuenta",
+                        "Eliminar Cuenta"
+                    )
+                ),
                 spacing="3", align="center"
             ),
             padding_y="16px", padding_x="20px"
         ),
-
-        # --- Estilos de la fila ---
-        _hover={"background": "#F8FAFC"},  # Un gris muy sutil para el hover
+        _hover={"background": "#F8FAFC"},
         transition="background 0.2s"
+    )
+
+
+def paginacion_tabla(pagina_actual, total_paginas, total_registros, anterior, siguiente, etiqueta: str) -> rx.Component:
+    return rx.box(
+        rx.hstack(
+            rx.button(
+                rx.hstack(
+                    rx.icon("chevron-left", size=15),
+                    rx.text("Anterior", style={"font_size": "14px", "font_weight": "600"}),
+                    spacing="1", align="center"
+                ),
+                on_click=anterior,
+                is_disabled=pagina_actual <= 1,
+                variant="soft", color_scheme="gray", size="2",
+                style={"border": f"1px solid {COLOR_BORDE}", "border_radius": "10px"},
+                _hover={"background_color": "#E2E8F0"},
+            ),
+            rx.hstack(
+                rx.text(
+                    "Página ",
+                    rx.text.span(pagina_actual.to(str), style={"font_weight": "800", "color": "#6366F1"}),
+                    " de ",
+                    rx.text.span(total_paginas.to(str), style={"font_weight": "800"}),
+                    style={"font_size": "14px", "color": "#334155"},
+                ),
+                rx.badge(
+                    total_registros.to(str) + " registros",
+                    variant="soft", color_scheme="indigo", radius="full",
+                    style={"font_size": "12px", "font_weight": "700"},
+                ),
+                spacing="3", align="center",
+            ),
+            rx.button(
+                rx.hstack(
+                    rx.text("Siguiente", style={"font_size": "14px", "font_weight": "600"}),
+                    rx.icon("chevron-right", size=15),
+                    spacing="1", align="center"
+                ),
+                on_click=siguiente,
+                is_disabled=pagina_actual >= total_paginas,
+                variant="soft", color_scheme="indigo", size="2",
+                style={"border": "1px solid #C7D2FE", "border_radius": "10px"},
+                _hover={"background_color": "#EEF2FF"},
+            ),
+            justify="center", align="center", spacing="4", width="100%",
+        ),
+        padding="14px 20px",
+        background="#F8FAFC",
+        border_top=f"1px solid {COLOR_BORDE}",
+        border_radius="0 0 16px 16px",
+        width="100%",
     )
 
 
@@ -268,10 +336,18 @@ def contenido_usuarios() -> rx.Component:
                 ),
                 rx.table.body(
                     rx.foreach(
-                        EstadoMantenimiento.usuarios_filtrados, fila_usuario)
+                        EstadoMantenimiento.usuarios_paginados, fila_usuario)
                 ),
                 variant="surface", width="100%"
             )
+        ),
+        paginacion_tabla(
+            EstadoMantenimiento.usuarios_pagina_actual,
+            EstadoMantenimiento.usuarios_total_paginas,
+            EstadoMantenimiento.usuarios_total_registros,
+            EstadoMantenimiento.usuarios_pagina_anterior,
+            EstadoMantenimiento.usuarios_pagina_siguiente,
+            "usuarios"
         ),
         width="100%"
     )
@@ -343,11 +419,19 @@ def contenido_carreras() -> rx.Component:
                 ),
                 rx.table.body(
                     rx.foreach(
-                        EstadoMantenimiento.carreras_filtradas, fila_carrera)
+                        EstadoMantenimiento.carreras_paginadas, fila_carrera)
                 ),
                 variant="surface", 
                 width="100%"
             )
+        ),
+        paginacion_tabla(
+            EstadoMantenimiento.carreras_pagina_actual,
+            EstadoMantenimiento.carreras_total_paginas,
+            EstadoMantenimiento.carreras_total_registros,
+            EstadoMantenimiento.carreras_pagina_anterior,
+            EstadoMantenimiento.carreras_pagina_siguiente,
+            "carreras"
         ),
         width="100%"
     )
@@ -447,11 +531,19 @@ def contenido_tutores() -> rx.Component:
                 ),
                 rx.table.body(
                     rx.foreach(
-                        EstadoMantenimiento.tutores_filtrados, fila_tutor)
+                        EstadoMantenimiento.tutores_paginados, fila_tutor)
                 ),
                 variant="surface", 
                 width="100%"
             )
+        ),
+        paginacion_tabla(
+            EstadoMantenimiento.tutores_pagina_actual,
+            EstadoMantenimiento.tutores_total_paginas,
+            EstadoMantenimiento.tutores_total_registros,
+            EstadoMantenimiento.tutores_pagina_anterior,
+            EstadoMantenimiento.tutores_pagina_siguiente,
+            "tutores"
         ),
         width="100%"
     )
@@ -490,11 +582,19 @@ def contenido_roles() -> rx.Component:
                     )
                 ),
                 rx.table.body(
-                    rx.foreach(EstadoMantenimiento.roles_filtrados, fila_rol)
+                    rx.foreach(EstadoMantenimiento.roles_paginados, fila_rol)
                 ),
                 variant="surface", 
                 width="100%"
             )
+        ),
+        paginacion_tabla(
+            EstadoMantenimiento.roles_pagina_actual,
+            EstadoMantenimiento.roles_total_paginas,
+            EstadoMantenimiento.roles_total_registros,
+            EstadoMantenimiento.roles_pagina_anterior,
+            EstadoMantenimiento.roles_pagina_siguiente,
+            "roles"
         ),
         width="100%", spacing="4"
     )

@@ -23,6 +23,8 @@ dist/
 assets/documentos/doc_*
 assets/tesis/tesis_*
 # Local env
-*.env
+.env
+.env.local
+!.env.example
 # Build artifacts/Web
 .web/

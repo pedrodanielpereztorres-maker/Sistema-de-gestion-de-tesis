@@ -11,7 +11,11 @@ def campo_texto(
     solo_lectura: bool | rx.Var[bool] = False,
     **props,
 ) -> rx.Component:
+    # Extracción de placeholder o generación automática
+    placeholder = props.pop("placeholder", f"Ingrese {label.lower()}")
+    
     input_editable = rx.input(
+        placeholder=placeholder,
         value=valor,
         on_change=setter,
         type=tipo,
@@ -25,7 +29,12 @@ def campo_texto(
             "border": "1.5px solid #CBD5E1",
             "font_size": "13.5px",
             "font_weight": "bold",
-            "&::placeholder": {"color": COLOR_PLACEHOLDER, "opacity": "0.8", "font_weight": "500"},
+            "&::placeholder": {
+                                    "color": "#94A3B8",
+                                    "opacity": "0.85",
+                                    "font_weight": "500",
+                                    "letter_spacing": "0.01em",
+                                },
         },
         _focus={
             "border_color": "#3B82F6",

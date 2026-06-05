@@ -13,15 +13,16 @@ def pagina_login() -> rx.Component:
             rx.center(
                 rx.card(
                     rx.vstack(
-                        # Ícono graduación en contenedor circular gradient brillante
+                        # Logo institucional centrado (sin fondo blanco)
                         rx.center(
-                            rx.center(
-                                rx.icon("graduation-cap", size=32, color="white"),
-                                width="64px",
-                                height="64px",
-                                background="linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)",
-                                border_radius="20px",
-                                box_shadow="0 8px 24px rgba(99, 102, 241, 0.3)",
+                            rx.image(
+                                src="/iutepi.png",
+                                alt="Logo IUTEPI",
+                                width=["260px", "300px", "320px"],
+                                height=["100px", "110px", "120px"],
+                                object_fit="contain",
+                                background="transparent",
+                                style={"backgroundColor": "transparent"},
                             ),
                             width="100%",
                             margin_bottom="2",
@@ -54,7 +55,13 @@ def pagina_login() -> rx.Component:
                                     "font_weight": "500",
                                     "border_radius": "12px",
                                     "box_shadow": "inset 0 1px 2px rgba(0, 0, 0, 0.02)",
-                                    "&::placeholder": {"color": "#94A3B8", "font_weight": "500"},
+                                    "&::placeholder": {
+                                    "color": "#94A3B8",
+                                    "opacity": "0.85",
+                                    "font_weight": "500",
+                                    "letter_spacing": "0.01em",
+                                },
+                                    "letter_spacing": "0.01em",
                                 },
                                 _focus={
                                     "border_color": "#6366F1",
@@ -92,7 +99,13 @@ def pagina_login() -> rx.Component:
                                         "border_radius": "12px",
                                         "padding_right": "45px",
                                         "box_shadow": "inset 0 1px 2px rgba(0, 0, 0, 0.02)",
-                                        "&::placeholder": {"color": "#94A3B8", "font_weight": "500"},
+                                        "&::placeholder": {
+                                    "color": "#94A3B8",
+                                    "opacity": "0.85",
+                                    "font_weight": "500",
+                                    "letter_spacing": "0.01em",
+                                },
+                                        "letter_spacing": "0.01em",
                                     },
                                     _focus={
                                         "border_color": "#6366F1",
@@ -168,24 +181,10 @@ def pagina_login() -> rx.Component:
                         "border-radius": "24px",
                         "box_shadow": "0 20px 40px -15px rgba(99, 102, 241, 0.12), 0 0 0 1px rgba(99, 102, 241, 0.04)",
                         "border": "1px solid #E2E8F0",
-                        "padding": "36px",
+                        "padding": "32px",
                     },
                 ),
                 height="100vh",
-            ),
-            # Logo flotante en esquina
-            rx.image(
-                src="/logo.png",
-                width=["100px", "130px", "160px"],
-                object_fit="contain",
-                position="fixed",
-                bottom="0px",
-                right="0px",
-                opacity=["0.6", "0.4", "0.3"],
-                filter="drop-shadow(0 2px 4px rgba(0,0,0,0.05))",
-                transition="all 0.4s ease-in-out",
-                _hover={"opacity": "0.9", "transform": "scale(1.05)"},
-                z_index="10",
             ),
             background="radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.05) 0%, rgba(255, 255, 255, 1) 90%)",
             width="100%",

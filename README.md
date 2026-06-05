@@ -17,12 +17,22 @@ para ver su información y perfil.
 2. Crear entorno virtual: `python -m venv .venv`
 3. Activar entorno: `.venv\Scripts\activate` (Windows)
 4. Instalar dependencias: `pip install -r requirements.txt`
-5. Copiar `.env.example` a `.env` y configurar con tus credenciales
+5. Copiar `.env.example` a `.env` y configurar con tus credenciales locales
 6. Crear la base de datos en PostgreSQL: `CREATE DATABASE DB_TESIS;`
 7. Ejecutar: `reflex run` (desarrollo) o `reflex run --env prod` (producción)
 
 ## Configuración inicial
 Copiar `.env.example` a `.env` y completar los valores con tus credenciales locales.
+
+> El archivo `.env` debe permanecer únicamente en tu máquina local y **no debe subirse a Git ni compartirse en ningún paquete**.
+> El archivo `.env.example` sí puede versionarse y sirve como plantilla para otros desarrolladores.
+
+## Pruebas
+Ejecutar las pruebas locales con:
+
+```bash
+env PYTHONPATH=. .venv/bin/python -m unittest discover -s tests
+```
 
 > El archivo `.env` con credenciales reales NUNCA se comparte ni se adjunta en un ZIP de entrega.
 > Mantén `.env` solo en la máquina del servidor o en tu entorno de desarrollo local.

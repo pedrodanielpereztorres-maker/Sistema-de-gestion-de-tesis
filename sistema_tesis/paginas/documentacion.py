@@ -187,13 +187,16 @@ def panel_administrador() -> rx.Component:
                                 },
                                 "font_weight": "bold",
                                 "&::placeholder": {
-                                    "color": "#000000",
-                                    "opacity": "1",
-                                    "font_weight": "bold",
+                                    "color": "#94A3B8",
+                                    "opacity": "0.85",
+                                    "font_weight": "500",
+                                    "letter_spacing": "0.01em",
                                 },
                                 "& input::placeholder": {
-                                    "color": "#000000",
-                                    "opacity": "1",
+                                    "color": "#94A3B8",
+                                    "opacity": "0.85",
+                                    "font_weight": "500",
+                                    "letter_spacing": "0.01em",
                                 }
                             }
                         ),
@@ -212,13 +215,16 @@ def panel_administrador() -> rx.Component:
                                 },
                                 "font_weight": "bold",
                                 "&::placeholder": {
-                                    "color": "#000000",
-                                    "opacity": "1",
-                                    "font_weight": "bold",
+                                    "color": "#94A3B8",
+                                    "opacity": "0.85",
+                                    "font_weight": "500",
+                                    "letter_spacing": "0.01em",
                                 },
                                 "& textarea::placeholder": {
-                                    "color": "#000000",
-                                    "opacity": "1",
+                                    "color": "#94A3B8",
+                                    "opacity": "0.85",
+                                    "font_weight": "500",
+                                    "letter_spacing": "0.01em",
                                 }
                             }
                         ),
@@ -343,6 +349,7 @@ def modal_editar_documento() -> rx.Component:
                     rx.text("Título", size="2",
                             weight="bold", color="#1E293B"),
                     rx.input(
+                        placeholder="Título del documento",
                         value=EstadoDocumento.titulo_edicion,
                         on_change=EstadoDocumento.fijar_titulo_edicion,
                         variant="classic",
@@ -354,12 +361,18 @@ def modal_editar_documento() -> rx.Component:
                             "& input": {
                                 "color": "black",
                             },
-                            "&::placeholder": {"color": "#000000", "opacity": "1", "font_weight": "bold"},
+                            "&::placeholder": {
+                                    "color": "#94A3B8",
+                                    "opacity": "0.85",
+                                    "font_weight": "500",
+                                    "letter_spacing": "0.01em",
+                                },
                         }
                     ),
                     rx.text("Descripción", size="2",
                             weight="bold", color="#1E293B"),
                     rx.text_area(
+                        placeholder="Descripción breve del contenido",
                         value=EstadoDocumento.descripcion_edicion,
                         on_change=EstadoDocumento.fijar_descripcion_edicion,
                         variant="classic",
@@ -371,7 +384,12 @@ def modal_editar_documento() -> rx.Component:
                             "& textarea": {
                                 "color": "black",
                             },
-                            "&::placeholder": {"color": "#000000", "opacity": "1", "font_weight": "bold"},
+                            "&::placeholder": {
+                                    "color": "#94A3B8",
+                                    "opacity": "0.85",
+                                    "font_weight": "500",
+                                    "letter_spacing": "0.01em",
+                                },
                         }
                     ),
                     rx.hstack(
@@ -436,9 +454,11 @@ def contenido_documentacion() -> rx.Component:
                     "font_size": "15px",
                     "font_weight": "500",
                     "&::placeholder": {
-                        "color": "#64748B",
-                        "opacity": "1",
-                    },
+                                    "color": "#94A3B8",
+                                    "opacity": "0.85",
+                                    "font_weight": "500",
+                                    "letter_spacing": "0.01em",
+                                },
                 },
                 _focus={"border_color": "#6366F1"},
                 _hover={"border_color": "#6366F1"},

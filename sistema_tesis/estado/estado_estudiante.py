@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from datetime import date, datetime, timedelta
 import csv
 import io
-from .estado_autenticacion import EstadoAutenticacion
+from .estado_autenticacion import EstadoAutenticacion, EncriptadorContrasena
 from typing import List, Dict, Any
 from ..database_manager import obtener_conexion
 from .estado_boveda import EstadoBoveda
@@ -80,7 +80,7 @@ class EstadoEstudiante(rx.State):
 
     # Paginación
     pagina_actual: int = 1
-    registros_por_pagina: int = 20
+    registros_por_pagina: int = 10
     total_registros: int = 0
     total_paginas: int = 1
 
@@ -453,12 +453,29 @@ class EstadoEstudiante(rx.State):
     async def confirmar_eliminacion_estudiante(self) -> rx.Component:
         if not self.cedula_a_eliminar:
             return rx.toast.error("No se seleccionó ningún estudiante.")
+
+        if not self.password_confirmacion:
+            return rx.toast.error("Debe ingresar su contraseña para confirmar la eliminación.")
+
+        estado_auth = await self.get_state(EstadoAutenticacion)
+        if not estado_auth.usuario:
+            return rx.toast.error("Sesión no válida o expirada.")
+
         conn = obtener_conexion()
         if conn is None:
             return rx.toast.error("Error de conexión al servidor.")
         try:
             with conn:
                 with conn.cursor() as cursor:
+                    cursor.execute("SELECT contrasena_hash FROM usuario WHERE id = %s AND esta_activo = TRUE", (estado_auth.usuario.id,))
+                    resultado = cursor.fetchone()
+                    if not resultado:
+                        return rx.toast.error("Usuario no registrado o inactivo.")
+
+                    hash_almacenado = resultado[0]
+                    if not EncriptadorContrasena.verificar(self.password_confirmacion, hash_almacenado):
+                        return rx.toast.error("La contraseña ingresada es incorrecta.")
+
                     cursor.execute("UPDATE estudiante SET esta_activo = FALSE WHERE cedula = %s", (self.cedula_a_eliminar,))
                     cursor.execute("UPDATE usuario SET esta_activo = FALSE WHERE cedula = %s", (self.cedula_a_eliminar,))
                 conn.commit()

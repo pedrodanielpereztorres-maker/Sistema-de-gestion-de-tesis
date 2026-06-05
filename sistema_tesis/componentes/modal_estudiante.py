@@ -245,10 +245,11 @@ def modal_registrar_estudiante() -> rx.Component:
                                             "font_weight": "bold",
                                             "cursor": rx.cond(EstadoEstudiante.en_edicion, "not-allowed", "text"),
                                             "&::placeholder": {
-                                                "color": "#000000",
-                                                "opacity": "1",
-                                                "font_weight": "bold",
-                                            },
+                                    "color": "#94A3B8",
+                                    "opacity": "0.85",
+                                    "font_weight": "500",
+                                    "letter_spacing": "0.01em",
+                                },
                                         },
                                         placeholder="Cédula de Identidad",  # Add placeholder for clarity
                                         _focus={
