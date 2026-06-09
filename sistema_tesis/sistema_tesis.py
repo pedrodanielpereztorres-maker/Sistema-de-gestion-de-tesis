@@ -17,7 +17,7 @@ app = rx.App(
         accent_color="indigo",
         gray_color="slate",
         radius="large",
-        scaling="110%"
+        scaling="95%"
     ),
     stylesheets=[
         "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"

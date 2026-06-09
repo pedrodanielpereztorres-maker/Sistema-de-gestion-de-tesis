@@ -784,11 +784,21 @@ class EstadoEstudiante(rx.State):
         return self.carreras_con_cantidad
 
     async def generar_reporte_estudiantes(self) -> rx.Component:
-        """Genera un CSV en memoria con los estudiantes listados. Devuelve toast al terminar.
-        (Descarga no implementada en esta prueba automatizada.)"""
+        """Genera y descarga un CSV con todos los estudiantes listados."""
+        if not self.lista_estudiantes:
+            return rx.toast.warning("No hay estudiantes para exportar.")
         try:
             output = io.StringIO()
             writer = csv.writer(output)
+            
+            writer.writerow(["=========================================================================================="])
+            writer.writerow(["SISTEMA DE GESTIÓN DE TESIS - REPORTE DE ESTUDIANTES"])
+            writer.writerow(["=========================================================================================="])
+            writer.writerow(["DESCRIPCIÓN:", "Listado detallado del estado actual de todos los alumnos registrados."])
+            writer.writerow(["FECHA GENERACIÓN:", datetime.now().strftime('%d/%m/%Y %H:%M')])
+            writer.writerow(["=========================================================================================="])
+            writer.writerow([])
+            
             writer.writerow(["Cédula", "Nombre", "Apellido", "Carrera", "Teléfono", "Inicio", "Cierre"])
             for e in self.lista_estudiantes:
                 writer.writerow([
@@ -796,8 +806,11 @@ class EstadoEstudiante(rx.State):
                     e.get("carrera", ""), e.get("telefono_personal", ""),
                     e.get("periodo_inicio", ""), e.get("periodo_cierre", ""),
                 ])
-            # Nota: aquí podríamos guardar a disco o enviar como respuesta; por ahora devolvemos un toast.
-            return rx.toast.success("Reporte generado (en memoria).")
+            
+            return rx.download(
+                data=output.getvalue(),
+                filename=f"reporte_estudiantes_{datetime.now().strftime('%d_%m_%Y')}.csv"
+            )
         except Exception as e:
             logger.exception("Error al generar reporte de estudiantes: %s", e)
             return rx.toast.error(f"Error al generar reporte: {e}")

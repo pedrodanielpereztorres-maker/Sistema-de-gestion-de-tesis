@@ -282,8 +282,9 @@ def sidebar_contenido() -> rx.Component:
             padding_x="8px",
             padding_y="6px",
             flex="1",
-            # Evita scroll en PC/Laptop, se controla desde el layout para móvil
-            overflow="hidden",
+            # Permitimos scroll vertical para que en Windows (donde las fuentes son más grandes) no se corten opciones
+            overflow_y="auto",
+            overflow_x="hidden",
             align="start",
             on_click=EstadoLayout.cerrar_menu,
         ),

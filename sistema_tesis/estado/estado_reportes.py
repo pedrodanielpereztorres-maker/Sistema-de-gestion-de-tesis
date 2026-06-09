@@ -36,6 +36,15 @@ class EstadoReportes(rx.State):
         try:
             salida = io.StringIO()
             escritor = csv.writer(salida)
+            
+            escritor.writerow(["=========================================================================================="])
+            escritor.writerow(["SISTEMA DE GESTIÓN DE TESIS - REPORTE DE BÓVEDA DE TESIS"])
+            escritor.writerow(["=========================================================================================="])
+            escritor.writerow(["DESCRIPCIÓN:", "Listado detallado de todos los trabajos de grado y tesis registrados."])
+            escritor.writerow(["FECHA GENERACIÓN:", datetime.now().strftime('%d/%m/%Y %H:%M')])
+            escritor.writerow(["=========================================================================================="])
+            escritor.writerow([])
+            
             escritor.writerow(["ID", "Cédula", "Nombre", "Apellido", "Carrera", "Tutor Académico", "Tutor Empresarial", "Empresa", "Título", "Pública"])
             for t in boveda.lista_tesis:
                 escritor.writerow([
