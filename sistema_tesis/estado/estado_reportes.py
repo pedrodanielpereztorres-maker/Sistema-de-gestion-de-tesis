@@ -22,9 +22,9 @@ class EstadoReportes(rx.State):
     mejores_empresas: List[Dict[str, Any]] = []
     procesando: bool = False
 
-    async def exportar_tesis_csv(self):
+    async def exportar_tesis_excel(self):
         """
-        Genera y descarga un CSV con todas las tesis registradas.
+        Genera y descarga un Excel con todas las tesis registradas de manera profesional.
         """
         boveda = await self.get_state(EstadoBoveda)
         if not boveda.lista_tesis:
@@ -34,28 +34,83 @@ class EstadoReportes(rx.State):
             return rx.toast.warning("No hay tesis registradas para exportar.")
         
         try:
-            salida = io.StringIO()
-            escritor = csv.writer(salida)
+            import io
+            from openpyxl import Workbook
+            from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
             
-            escritor.writerow(["=========================================================================================="])
-            escritor.writerow(["SISTEMA DE GESTIÓN DE TESIS - REPORTE DE BÓVEDA DE TESIS"])
-            escritor.writerow(["=========================================================================================="])
-            escritor.writerow(["DESCRIPCIÓN:", "Listado detallado de todos los trabajos de grado y tesis registrados."])
-            escritor.writerow(["FECHA GENERACIÓN:", datetime.now().strftime('%d/%m/%Y %H:%M')])
-            escritor.writerow(["=========================================================================================="])
-            escritor.writerow([])
+            wb = Workbook()
+            ws = wb.active
+            ws.title = "Bóveda de Tesis"
             
-            escritor.writerow(["ID", "Cédula", "Nombre", "Apellido", "Carrera", "Tutor Académico", "Tutor Empresarial", "Empresa", "Título", "Pública"])
-            for t in boveda.lista_tesis:
-                escritor.writerow([
+            # Estilos profesionales
+            color_primario = "6366F1" # Indigo
+            color_secundario = "F1F5F9"
+            
+            fuente_titulo = Font(name='Arial', size=16, bold=True, color="FFFFFF")
+            fuente_header = Font(name='Arial', size=12, bold=True, color="FFFFFF")
+            fuente_normal = Font(name='Arial', size=11)
+            
+            alineacion_centro = Alignment(horizontal='center', vertical='center')
+            alineacion_izq = Alignment(horizontal='left', vertical='center')
+            
+            relleno_titulo = PatternFill(start_color=color_primario, end_color=color_primario, fill_type="solid")
+            relleno_header = PatternFill(start_color="475569", end_color="475569", fill_type="solid")
+            relleno_fila_par = PatternFill(start_color=color_secundario, end_color=color_secundario, fill_type="solid")
+            
+            borde_delgado = Border(
+                left=Side(style='thin', color="CBD5E1"),
+                right=Side(style='thin', color="CBD5E1"),
+                top=Side(style='thin', color="CBD5E1"),
+                bottom=Side(style='thin', color="CBD5E1")
+            )
+            
+            # Encabezado del reporte
+            ws.merge_cells('A1:J1')
+            ws['A1'] = "SISTEMA DE GESTIÓN DE TESIS - REPORTE DE BÓVEDA DE TESIS"
+            ws['A1'].font = fuente_titulo
+            ws['A1'].alignment = alineacion_centro
+            ws['A1'].fill = relleno_titulo
+            
+            ws.merge_cells('A2:J2')
+            ws['A2'] = f"Descripción: Listado detallado de todos los trabajos de grado y tesis registrados. | Generado: {datetime.now().strftime('%d/%m/%Y %H:%M')}"
+            ws['A2'].font = Font(name='Arial', size=11, italic=True)
+            ws['A2'].alignment = alineacion_centro
+            
+            # Cabeceras de tabla
+            headers = ["ID", "Cédula", "Nombre", "Apellido", "Carrera", "Tutor Académico", "Tutor Empresarial", "Empresa", "Título", "Pública"]
+            for col_num, header in enumerate(headers, 1):
+                celda = ws.cell(row=4, column=col_num, value=header)
+                celda.font = fuente_header
+                celda.alignment = alineacion_centro
+                celda.fill = relleno_header
+                celda.border = borde_delgado
+            
+            # Datos
+            for row_num, t in enumerate(boveda.lista_tesis, 5):
+                datos_fila = [
                     t.get("id", ""), t.get("cedula_estudiante", ""), t.get("nombre_estudiante", ""),
                     t.get("apellido_estudiante", ""), t.get("carrera", ""), t.get("tutor_academico", ""),
                     t.get("tutor_empresa", ""), t.get("nombre_empresa", ""),
                     t.get("titulo", ""), "Sí" if t.get("publico", False) else "No",
-                ])
+                ]
+                for col_num, valor in enumerate(datos_fila, 1):
+                    celda = ws.cell(row=row_num, column=col_num, value=valor)
+                    celda.font = fuente_normal
+                    celda.alignment = alineacion_izq if col_num > 2 else alineacion_centro
+                    celda.border = borde_delgado
+                    if row_num % 2 == 0:
+                        celda.fill = relleno_fila_par
+            
+            # Ajustar anchos de columna
+            anchos = [5, 12, 15, 15, 20, 20, 20, 20, 40, 10]
+            for i, ancho in enumerate(anchos, 1):
+                ws.column_dimensions[ws.cell(row=4, column=i).column_letter].width = ancho
+
+            salida = io.BytesIO()
+            wb.save(salida)
             return rx.download(
                 data=salida.getvalue(),
-                filename=f"reporte_boveda_{datetime.now().strftime('%d_%m_%Y')}.csv"
+                filename=f"reporte_boveda_{datetime.now().strftime('%d_%m_%Y')}.xlsx"
             )
         except Exception as e:
             logger.exception("Error al generar reporte de bóveda: %s", e)
@@ -137,30 +192,84 @@ class EstadoReportes(rx.State):
                     pass
 
     def exportar_empresas_excel(self):
-        """Genera un reporte CSV de todas las empresas vinculadas."""
+        """Genera un reporte Excel profesional de todas las empresas vinculadas."""
         if not self.mejores_empresas:
             return rx.toast.warning("No hay datos de empresas para exportar.")
             
-        salida = io.StringIO()
-        escritor = csv.writer(salida)
-        # Estructura de encabezado visual (Simulación de bordes)
-        escritor.writerow(["=========================================================================================="])
-        escritor.writerow(["SISTEMA DE GESTIÓN DE TESIS - REPORTE DE VINCULACIÓN EMPRESARIAL"])
-        escritor.writerow(["=========================================================================================="])
-        escritor.writerow(["DESCRIPCIÓN:", "Listado detallado de todas las entidades aliadas y su carga de pasantes."])
-        escritor.writerow(["FECHA GENERACIÓN:", datetime.now().strftime('%d/%m/%Y %H:%M')])
-        escritor.writerow(["=========================================================================================="])
-        escritor.writerow([]) 
-
-        escritor.writerow(["Empresa", "Dirección", "Correo de Contacto", "Teléfono", "Pasantes Actuales"])
-        
-        for emp in self.mejores_empresas:
-            escritor.writerow([emp["nombre"], emp["direccion"], emp["correo"], emp["telefono"], emp["cantidad"]])
+        try:
+            import io
+            from openpyxl import Workbook
+            from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
             
-        return rx.download(
-            data=salida.getvalue(),
-            filename=f"reporte_empresas_{datetime.now().strftime('%d_%m_%Y')}.csv"
-        )
+            wb = Workbook()
+            ws = wb.active
+            ws.title = "Vinculación Empresarial"
+            
+            # Estilos
+            color_primario = "10B981" # Emerald
+            color_secundario = "F1F5F9"
+            
+            fuente_titulo = Font(name='Arial', size=16, bold=True, color="FFFFFF")
+            fuente_header = Font(name='Arial', size=12, bold=True, color="FFFFFF")
+            fuente_normal = Font(name='Arial', size=11)
+            
+            alineacion_centro = Alignment(horizontal='center', vertical='center')
+            alineacion_izq = Alignment(horizontal='left', vertical='center')
+            
+            relleno_titulo = PatternFill(start_color=color_primario, end_color=color_primario, fill_type="solid")
+            relleno_header = PatternFill(start_color="475569", end_color="475569", fill_type="solid")
+            relleno_fila_par = PatternFill(start_color=color_secundario, end_color=color_secundario, fill_type="solid")
+            
+            borde_delgado = Border(
+                left=Side(style='thin', color="CBD5E1"),
+                right=Side(style='thin', color="CBD5E1"),
+                top=Side(style='thin', color="CBD5E1"),
+                bottom=Side(style='thin', color="CBD5E1")
+            )
+            
+            # Encabezado
+            ws.merge_cells('A1:E1')
+            ws['A1'] = "SISTEMA DE GESTIÓN DE TESIS - REPORTE DE VINCULACIÓN EMPRESARIAL"
+            ws['A1'].font = fuente_titulo
+            ws['A1'].alignment = alineacion_centro
+            ws['A1'].fill = relleno_titulo
+            
+            ws.merge_cells('A2:E2')
+            ws['A2'] = f"Descripción: Listado detallado de todas las entidades aliadas y su carga de pasantes. | Generado: {datetime.now().strftime('%d/%m/%Y %H:%M')}"
+            ws['A2'].font = Font(name='Arial', size=11, italic=True)
+            ws['A2'].alignment = alineacion_centro
+            
+            headers = ["Empresa", "Dirección", "Correo de Contacto", "Teléfono", "Pasantes Actuales"]
+            for col_num, header in enumerate(headers, 1):
+                celda = ws.cell(row=4, column=col_num, value=header)
+                celda.font = fuente_header
+                celda.alignment = alineacion_centro
+                celda.fill = relleno_header
+                celda.border = borde_delgado
+            
+            for row_num, emp in enumerate(self.mejores_empresas, 5):
+                datos_fila = [emp["nombre"], emp["direccion"], emp["correo"], emp["telefono"], emp["cantidad"]]
+                for col_num, valor in enumerate(datos_fila, 1):
+                    celda = ws.cell(row=row_num, column=col_num, value=valor)
+                    celda.font = fuente_normal
+                    celda.alignment = alineacion_centro if col_num == 5 else alineacion_izq
+                    celda.border = borde_delgado
+                    if row_num % 2 == 0:
+                        celda.fill = relleno_fila_par
+            
+            anchos = [35, 40, 30, 20, 15]
+            for i, ancho in enumerate(anchos, 1):
+                ws.column_dimensions[ws.cell(row=4, column=i).column_letter].width = ancho
+
+            salida = io.BytesIO()
+            wb.save(salida)
+            return rx.download(
+                data=salida.getvalue(),
+                filename=f"reporte_empresas_{datetime.now().strftime('%d_%m_%Y')}.xlsx"
+            )
+        except Exception as e:
+            logger.exception("Error al generar reporte excel: %s", e)
+            return rx.toast.error("Error al generar el reporte de empresas en Excel.")
 
     def exportar_empresas_pdf(self):
         """Genera un reporte PDF profesional de las empresas."""

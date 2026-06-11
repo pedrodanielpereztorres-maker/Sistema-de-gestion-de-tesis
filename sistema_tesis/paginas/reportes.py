@@ -112,7 +112,7 @@ def contenido_reportes() -> rx.Component:
     return rx.vstack(
         encabezado_pagina(
             "Analítica y Reportes", 
-            "Descargar Estudiantes (CSV)", 
+            "Descargar Estudiantes (Excel)", 
             EstadoEstudiante.generar_reporte_estudiantes
         ),
         
@@ -120,10 +120,10 @@ def contenido_reportes() -> rx.Component:
         seccion_reporte(
             "Centro de Exportación de Datos", "Genera archivos físicos para trámites administrativos.", "cloud-download",
             rx.grid(
-                tarjeta_exportacion("Empresas (CSV)", "Listado detallado de aliados estratégicos.", "file-spreadsheet", "green", EstadoReportes.exportar_empresas_excel),
+                tarjeta_exportacion("Empresas (Excel)", "Listado detallado de aliados estratégicos.", "file-spreadsheet", "green", EstadoReportes.exportar_empresas_excel),
                 tarjeta_exportacion("Empresas (PDF)", "Formato PDF listo para imprimir.", "file-text", "red", EstadoReportes.exportar_empresas_pdf),
-                tarjeta_exportacion("Estudiantes (CSV)", "Estado actual de todos los alumnos.", "users", "indigo", EstadoEstudiante.generar_reporte_estudiantes),
-                tarjeta_exportacion("Bóveda (CSV)", "Listado de trabajos de grado registrados.", "library", "amber", EstadoReportes.exportar_tesis_csv),
+                tarjeta_exportacion("Estudiantes (Excel)", "Estado actual de todos los alumnos.", "users", "indigo", EstadoEstudiante.generar_reporte_estudiantes),
+                tarjeta_exportacion("Bóveda (Excel)", "Listado de trabajos de grado registrados.", "library", "amber", EstadoReportes.exportar_tesis_excel),
                 columns={"initial": "1", "sm": "2", "md": "4"}, spacing="4", width="100%"
             )
         ),

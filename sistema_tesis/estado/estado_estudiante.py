@@ -784,32 +784,83 @@ class EstadoEstudiante(rx.State):
         return self.carreras_con_cantidad
 
     async def generar_reporte_estudiantes(self) -> rx.Component:
-        """Genera y descarga un CSV con todos los estudiantes listados."""
+        """Genera y descarga un Excel profesional con todos los estudiantes listados."""
         if not self.lista_estudiantes:
             return rx.toast.warning("No hay estudiantes para exportar.")
         try:
-            output = io.StringIO()
-            writer = csv.writer(output)
+            import io
+            from openpyxl import Workbook
+            from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
             
-            writer.writerow(["=========================================================================================="])
-            writer.writerow(["SISTEMA DE GESTIÓN DE TESIS - REPORTE DE ESTUDIANTES"])
-            writer.writerow(["=========================================================================================="])
-            writer.writerow(["DESCRIPCIÓN:", "Listado detallado del estado actual de todos los alumnos registrados."])
-            writer.writerow(["FECHA GENERACIÓN:", datetime.now().strftime('%d/%m/%Y %H:%M')])
-            writer.writerow(["=========================================================================================="])
-            writer.writerow([])
+            wb = Workbook()
+            ws = wb.active
+            ws.title = "Reporte de Estudiantes"
             
-            writer.writerow(["Cédula", "Nombre", "Apellido", "Carrera", "Teléfono", "Inicio", "Cierre"])
-            for e in self.lista_estudiantes:
-                writer.writerow([
+            # Estilos profesionales
+            color_primario = "4F46E5" # Indigo
+            color_secundario = "F8FAFC"
+            
+            fuente_titulo = Font(name='Arial', size=16, bold=True, color="FFFFFF")
+            fuente_header = Font(name='Arial', size=12, bold=True, color="FFFFFF")
+            fuente_normal = Font(name='Arial', size=11)
+            
+            alineacion_centro = Alignment(horizontal='center', vertical='center')
+            alineacion_izq = Alignment(horizontal='left', vertical='center')
+            
+            relleno_titulo = PatternFill(start_color=color_primario, end_color=color_primario, fill_type="solid")
+            relleno_header = PatternFill(start_color="334155", end_color="334155", fill_type="solid")
+            relleno_fila_par = PatternFill(start_color=color_secundario, end_color=color_secundario, fill_type="solid")
+            
+            borde_delgado = Border(
+                left=Side(style='thin', color="E2E8F0"),
+                right=Side(style='thin', color="E2E8F0"),
+                top=Side(style='thin', color="E2E8F0"),
+                bottom=Side(style='thin', color="E2E8F0")
+            )
+            
+            # Encabezado
+            ws.merge_cells('A1:G1')
+            ws['A1'] = "SISTEMA DE GESTIÓN DE TESIS - REPORTE DE ESTUDIANTES"
+            ws['A1'].font = fuente_titulo
+            ws['A1'].alignment = alineacion_centro
+            ws['A1'].fill = relleno_titulo
+            
+            ws.merge_cells('A2:G2')
+            ws['A2'] = f"Descripción: Listado detallado del estado actual de todos los alumnos registrados. | Generado: {datetime.now().strftime('%d/%m/%Y %H:%M')}"
+            ws['A2'].font = Font(name='Arial', size=11, italic=True)
+            ws['A2'].alignment = alineacion_centro
+            
+            headers = ["Cédula", "Nombre", "Apellido", "Carrera", "Teléfono", "Inicio", "Cierre"]
+            for col_num, header in enumerate(headers, 1):
+                celda = ws.cell(row=4, column=col_num, value=header)
+                celda.font = fuente_header
+                celda.alignment = alineacion_centro
+                celda.fill = relleno_header
+                celda.border = borde_delgado
+            
+            for row_num, e in enumerate(self.lista_estudiantes, 5):
+                datos_fila = [
                     e.get("cedula", ""), e.get("nombre", ""), e.get("apellido", ""),
                     e.get("carrera", ""), e.get("telefono_personal", ""),
                     e.get("periodo_inicio", ""), e.get("periodo_cierre", ""),
-                ])
+                ]
+                for col_num, valor in enumerate(datos_fila, 1):
+                    celda = ws.cell(row=row_num, column=col_num, value=valor)
+                    celda.font = fuente_normal
+                    celda.alignment = alineacion_izq if col_num in (2, 3, 4) else alineacion_centro
+                    celda.border = borde_delgado
+                    if row_num % 2 == 0:
+                        celda.fill = relleno_fila_par
             
+            anchos = [12, 20, 20, 25, 15, 12, 12]
+            for i, ancho in enumerate(anchos, 1):
+                ws.column_dimensions[ws.cell(row=4, column=i).column_letter].width = ancho
+
+            salida = io.BytesIO()
+            wb.save(salida)
             return rx.download(
-                data=output.getvalue(),
-                filename=f"reporte_estudiantes_{datetime.now().strftime('%d_%m_%Y')}.csv"
+                data=salida.getvalue(),
+                filename=f"reporte_estudiantes_{datetime.now().strftime('%d_%m_%Y')}.xlsx"
             )
         except Exception as e:
             logger.exception("Error al generar reporte de estudiantes: %s", e)
